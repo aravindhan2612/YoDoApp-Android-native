@@ -8,12 +8,21 @@ import com.example.ytsample.entities.ProgressState
 
 class LiveDataHelper private constructor() {
     private val state = MediatorLiveData<ProgressState>()
+    private val data = MediatorLiveData<ProgressState>()
     fun updatePercentage(percentage: ProgressState) {
         state.postValue(percentage)
     }
 
     fun observePercentage(): LiveData<ProgressState> {
         return state
+    }
+
+    fun addData(percentage: ProgressState) {
+        data.postValue(percentage)
+    }
+
+    fun observeData(): LiveData<ProgressState> {
+        return data
     }
 
     companion object {

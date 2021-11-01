@@ -24,7 +24,6 @@ import com.example.ytsample.ui.home.LiveDataHelper
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    var isWorkInfoRunning = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,38 +1,34 @@
 package com.example.ytsample.ui.home
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.app.NotificationCompat
-import androidx.work.ListenableWorker
-import androidx.work.Worker
-import androidx.work.WorkerParameters
-import com.example.ytsample.MainActivity
-import com.example.ytsample.R
 import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.entities.ProgressState
 import com.example.ytsample.utils.YTNotification
 import com.google.gson.Gson
-import kotlinx.coroutines.delay
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 import java.net.URL
+import androidx.annotation.RequiresApi
+import androidx.work.*
+import kotlinx.coroutines.delay
+import java.net.HttpURLConnection
 
 
 class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) :
-    Worker(context, workerParams) {
+    CoroutineWorker(context, workerParams) {
 
     companion object {
+        const val Progress = "Progress"
         private var liveDataHelper: LiveDataHelper? = null
         private var MEGABYTE: Long = 1024L * 1024L;
+        var CHANNEL_ID: String = "YTSample"
 
         var TAG: Int = 1001;
         private var isNotified = false
@@ -47,12 +43,15 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
      * in background, so it will not impact to main thread or UI
      *
      */
-    override fun doWork(): ListenableWorker.Result {
+    override suspend fun doWork(): ListenableWorker.Result {
         try {
             val downloadedData: DownloadedData =
-                Gson().fromJson(inputData.getString("downloadedData"), DownloadedData::class.java)
+                Gson().fromJson(
+                    inputData.getString("downloadedData"),
+                    DownloadedData::class.java
+                )
             val url = URL(downloadedData.youtubeDlUrl)
-            val connection = url.openConnection()
+            val connection = url.openConnection() as HttpURLConnection
             connection.connect()
             // input stream to read file - with 8k buffer
             val input = BufferedInputStream(url.openStream(), 8192)
@@ -93,14 +92,17 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
             var bytesDownloaded: Int = 0
 
             val total: Long = bytesToMeg(connection.contentLength.toLong())
-            YTNotification(applicationContext).createNotificationChannel()
-            val builder = YTNotification(applicationContext).getNotificationBuilder()
-            val pendingIntent = YTNotification(applicationContext).getPendingIntent()
-            builder?.setSmallIcon(R.drawable.ic_round_arrow_downward_24)
-                ?.setContentTitle(downloadedData.downloadTitle)
-                ?.setContentIntent(pendingIntent)
-                ?.setOnlyAlertOnce(true)?.priority = NotificationCompat.PRIORITY_DEFAULT
-            val notificationManager = YTNotification(applicationContext).getNotificationManager()
+            val notifyId: Int = System.currentTimeMillis().toInt()
+            setForeground(createForegroundInfo(downloadedData.downloadTitle, 0, 0, notifyId))
+            LiveDataHelper?.instance?.addData(
+                ProgressState(
+                    0,
+                    total,
+                    0,
+                    false,
+                    notifyId.toString()
+                )
+            )
             while (run {
                     count = input.read(data)
                     count
@@ -112,32 +114,88 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
                 liveDataHelper?.updatePercentage(
                     ProgressState(
                         percent,
-                        total, bytesToMeg(bytesDownloaded.toLong()), false
+                        total, bytesToMeg(bytesDownloaded.toLong()), false, notifyId.toString()
                     )
                 )
-                builder?.setProgress(100, percent, false)
-                    ?.setContentText("$percent%")
-                notificationManager?.notify(TAG, builder?.build())
+                setForegroundAsync(
+                    createForegroundInfo(
+                        downloadedData.downloadTitle,
+                        percent,
+                        100, notifyId
+                    )
+                )
+                setProgress(workDataOf(Progress to percent))
             }
+            delay(2000)
+            setForeground(downloadFinished("Download completed", notifyId))
             // flushing output
             output?.flush()
             // closing streams
             output?.close()
             input.close()
-            liveDataHelper?.updatePercentage(ProgressState(null, null, null, true))
-            while (!isNotified) {
-                Thread.sleep(1000)
-                 builder?.setProgress(0, 0, false)?.setContentText("Download completed")?.setOngoing(false)
-                YTNotification(applicationContext).getNotificationManager()
-                    ?.notify(1001, builder?.build())
-                isNotified = true
-            }
+            liveDataHelper?.updatePercentage(ProgressState(null, null, null, true,notifyId.toString()))
 
         } catch (e: Exception) {
             return Result.retry()
         }
 
         return Result.success()
+    }
+
+    private fun createForegroundInfo(
+        downloadTitle: String?,
+        progress: Int,
+        max: Int, id: Int
+    ): ForegroundInfo {
+
+        val context = applicationContext
+        // This PendingIntent can be used to cancel the worker
+        // This PendingIntent can be used to cancel the worker
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createChannel()
+        }
+        val builder = YTNotification(applicationContext).getNotificationBuilder()
+        val pendingIntent = YTNotification(applicationContext).getPendingIntent()
+        val notification =
+            builder?.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
+                ?.setContentTitle(downloadTitle)
+                ?.setContentIntent(pendingIntent)
+                ?.setProgress(max, progress, false)
+                ?.setOnlyAlertOnce(true)
+                ?.setAutoCancel(false)
+                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
+
+        return ForegroundInfo(id, notification!!)
+
+    }
+
+    private fun downloadFinished(downloadTitle: String, id: Int): ForegroundInfo {
+
+        // This PendingIntent can be used to cancel the worker
+        // This PendingIntent can be used to cancel the worker
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createChannel()
+        }
+        val builder = YTNotification(applicationContext).getNotificationBuilder()
+        val pendingIntent = YTNotification(applicationContext).getPendingIntent()
+        val notification =
+            builder?.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
+                ?.setContentTitle(downloadTitle)
+                ?.setContentIntent(pendingIntent)
+                ?.setProgress(0, 0, false)
+                ?.setOnlyAlertOnce(true)
+                ?.setAutoCancel(false)
+                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
+
+        return ForegroundInfo(id, notification!!)
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createChannel() {
+        YTNotification(applicationContext).createNotificationChannel()
     }
 
     private fun bytesToMeg(bytes: Long): Long {

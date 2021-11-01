@@ -37,6 +37,7 @@ import android.os.Build
 
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.recyclerview.widget.DividerItemDecoration
 import java.io.File
 import java.io.FileOutputStream
 
@@ -80,6 +81,7 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     private fun initObserver() {
         viewModel._responseResult?.observe(viewLifecycleOwner, Observer { result ->
             result?.let {
+                println("**** response result " + it)
                 viewModel.extractUrl(it, requireContext())
             }
         })
@@ -96,14 +98,12 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     }
 
     private fun initAllData() {
-        if (!mainActivity.isWorkInfoRunning) {
-            binding.progressCircular.visibility = View.VISIBLE
-            viewModel.getRequest(
-                requireContext(),
-                args.url,
-                this
-            )
-        }
+        binding.progressCircular.visibility = View.VISIBLE
+        viewModel.getRequest(
+            requireContext(),
+            args.url,
+            this
+        )
     }
 
     override fun onClick(v: View?) {
@@ -120,18 +120,24 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         adapter = YTAdapter(list, meta, requireContext(), this)
         binding.recyclerView.adapter = adapter
+        binding.recyclerView.apply {
+            addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
+        }
     }
 
     fun downloadVideo(downloadedData: DownloadedData) {
         binding.recyclerView.visibility = View.GONE
         if (downloadedData.youtubeDlUrl != null) {
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            val data = Data.Builder().putString("downloadedData", Gson().toJson(downloadedData)).build()
+                .build()
+            val data =
+                Data.Builder().putString("downloadedData", Gson().toJson(downloadedData)).build()
             val task = OneTimeWorkRequest.Builder(DownLoadFileWorkManager::class.java)
                 .setInputData(data)
                 .setConstraints(constraints).build()
-            WorkManager.getInstance(requireContext().applicationContext).beginUniqueWork(task.id.toString(),ExistingWorkPolicy.APPEND_OR_REPLACE,task).enqueue()
+            WorkManager.getInstance(requireContext().applicationContext)
+                .beginUniqueWork(task.id.toString(), ExistingWorkPolicy.APPEND_OR_REPLACE, task)
+                .enqueue()
             val action =
                 YtBottomSheetFragmentDirections.actionYtBottomSheetFragmentToNavigationDownload(
                     downloadedData

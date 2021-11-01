@@ -11,14 +11,14 @@
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:scaleY="5"
-        android:layout_marginTop="40dp"
         android:layout_marginStart="20dp"
+        android:layout_marginTop="40dp"
         android:layout_marginEnd="20dp"
-        app:layout_constraintTop_toTopOf="parent"
+        android:scaleY="5"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:visibility="gone"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/text_download"
@@ -27,15 +27,22 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
-        android:textSize="20sp"
-        android:textColor="@color/black"
         android:text="@string/no_downloads"
         android:textAlignment="center"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/progress_horizontal"
-        android:visibility="visible"/>
+        app:layout_constraintTop_toBottomOf="@id/progress_horizontal" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/text_download"
+        tools:listitem="@layout/yt_download_item" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

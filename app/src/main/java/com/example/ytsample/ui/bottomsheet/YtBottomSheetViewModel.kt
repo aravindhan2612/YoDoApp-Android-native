@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import retrofit2.http.HTTP
 import java.io.*
 import java.lang.Exception
 import java.lang.StringBuilder
@@ -33,6 +34,7 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+
 
 class YtBottomSheetViewModel : ViewModel() {
     var responseResult = MutableLiveData<String>()
@@ -57,10 +59,12 @@ class YtBottomSheetViewModel : ViewModel() {
     private val LOG_TAG = "YTSample"
 
     fun getRequest(context: Context, ytUrl: String?, fragment: YtBottomSheetFragment) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val queue = Volley.newRequestQueue(context)
+        viewModelScope.launch {
+            val queue = Volley.newRequestQueue(context.applicationContext)
             var downnloadUrl = "https://youtube.com/watch?v="
             downnloadUrl += extractYTId(ytUrl)
+//            val result = getVideoResponse(downnloadUrl)
+//            responseResult.value = result
 
             val stringRequest = object : StringRequest(
                 Request.Method.GET, downnloadUrl,
@@ -77,6 +81,29 @@ class YtBottomSheetViewModel : ViewModel() {
             }
             queue.add(stringRequest)
         }
+    }
+
+    private suspend fun getVideoResponse(downnloadUrl: String): String =
+        withContext(Dispatchers.IO) {
+            val url = URL(downnloadUrl)
+            val connection = url?.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("User-agent", YouTubeUtils.USER_AGENT)
+            connection.connect()
+
+            val br = BufferedReader(InputStreamReader(connection.getInputStream()))
+            var sb = StringBuilder()
+            var output: String?
+            while (br.readLine().also { output = it } != null) {
+                sb.append(output)
+            }
+            return@withContext sb.toString()
+        }
+
+    fun getHeaders(): MutableMap<String, String> {
+        val headers: MutableMap<String, String> = HashMap()
+        headers["User-agent"] = YouTubeUtils.USER_AGENT
+        return headers
     }
 
     fun extractUrl(response: String, context: Context) {
@@ -303,6 +330,7 @@ class YtBottomSheetViewModel : ViewModel() {
             }
         }
     }
+
     @Throws(IOException::class)
     private fun decipherSignature(
         encSignatures: ArrayList<Signature>,

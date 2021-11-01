@@ -4,4 +4,9 @@
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
     <string name="title_downloads">Downloads</string>
+    <string name="paste_the_youtube_url_here">Paste the youtube url here</string>
+    <string name="no_downloads">No downloads</string>
+    <string name="channel_name">YTChannel</string>
+    <string name="channel_description">Downlaod progress</string>
+    <string name="generating_downloading_links">Generating downloading links</string>
 </resources>

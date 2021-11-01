@@ -2,6 +2,7 @@ package com.example.ytsample.utils
 
 import android.util.SparseArray
 import com.example.ytsample.entities.Format
+import org.json.JSONObject
 import java.util.regex.Pattern
 
 class YouTubeUtils {
@@ -42,6 +43,7 @@ class YouTubeUtils {
         @JvmStatic
         val patFunction: Pattern =
             Pattern.compile("([{; =])([a-zA-Z$\\_][a-zA-Z0-9$]{0,2})\\(")
+
     }
 
 }

@@ -8,14 +8,18 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ytsample.R
 import com.example.ytsample.databinding.YtItemBinding
+import com.example.ytsample.entities.DownloadedData
+import com.example.ytsample.entities.FormatsModel
 import com.example.ytsample.entities.VideoMeta
 import com.example.ytsample.entities.YtFile
+import com.example.ytsample.ui.bottomsheet.YtBottomSheetFragment
+import com.example.ytsample.ui.home.HomeFragment
 
 class YTAdapter(
-    var list: ArrayList<YtFile>?,
+    var list: ArrayList<FormatsModel>?,
     var meta: VideoMeta?,
     var context: Context,
-    var downloadsFragment: DownloadsFragment
+    var homeFragment: YtBottomSheetFragment
 ) : RecyclerView.Adapter<YTAdapter.Holder>() {
 
     private lateinit var ytBinding: YtItemBinding
@@ -29,17 +33,32 @@ class YTAdapter(
         }
 
         override fun onClick(v: View?) {
-            val url = list?.get(adapterPosition)?.url
+            val fm = list?.get(adapterPosition)
+            val url = fm?.format?.url?:fm?.adaptive?.url
+            val qualityLabel = fm?.format?.qualityLabel?:fm?.adaptive?.qualityLabel
             when (v?.id) {
-                R.id.button -> downloadsFragment.downloadVideo(url, meta?.title, meta?.author)
+                R.id.button -> {
+                    homeFragment.downloadVideo(DownloadedData( url, meta?.title,qualityLabel))
+                }
             }
         }
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
+        val fm = list?.get(position)
+        fm?.let {
+            if (it.format != null){
+                val videFormat = fm.format?.mimeType?.substringBefore(";")
+                var tv = if (it.format?.qualityLabel != null) fm.format?.qualityLabel+" $videFormat" else fm.format?.audioQuality
+                holder.binding.textView.text = tv
+            } else if (it.adaptive != null){
+                val videFormat = fm.adaptive?.mimeType?.substringBefore(";")
+                var tv = if (it.adaptive?.qualityLabel != null) fm.adaptive?.qualityLabel+" $videFormat" else fm.adaptive?.audioQuality
+                holder.binding.textView.text = tv
+            }
 
-        holder.binding.textView.text = list?.get(position)?.url.toString()
-        holder.binding.textView2.text = meta?.title
+        }
+
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {

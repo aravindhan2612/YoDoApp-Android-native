@@ -1,13 +1,11 @@
 package com.example.ytsample.ui.bottomsheet
 
 
-import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -20,32 +18,21 @@ import com.example.ytsample.databinding.YtBottomSheetFragmentBinding
 import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.entities.FormatsModel
 import com.example.ytsample.entities.VideoMeta
-import com.example.ytsample.ui.downloads.YTAdapter
+import com.example.ytsample.adapter.YTAdapter
 import com.example.ytsample.ui.home.DownLoadFileWorkManager
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
-import android.widget.Toast
 
-import android.app.DownloadManager
-import android.content.ContentValues
-import android.content.IntentFilter
-import android.net.Uri
-import android.os.Build
-
-import android.os.Environment
-import android.provider.MediaStore
 import androidx.recyclerview.widget.DividerItemDecoration
-import java.io.File
-import java.io.FileOutputStream
+import com.example.ytsample.utils.MainViewModel
 
 
 class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListener {
 
 
     private lateinit var viewModel: YtBottomSheetViewModel
+    private lateinit var mainActivityViewModel: MainViewModel
     private lateinit var binding: YtBottomSheetFragmentBinding
     val args: YtBottomSheetFragmentArgs by navArgs()
     private lateinit var mainActivity: MainActivity
@@ -73,6 +60,7 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
         super.onViewCreated(view, savedInstanceState)
         dialog?.setCancelable(false)
         viewModel = ViewModelProvider(this).get(YtBottomSheetViewModel::class.java)
+        mainActivityViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         binding.closeBtn.setOnClickListener(this)
         initObserver()
         initAllData()
@@ -81,7 +69,6 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     private fun initObserver() {
         viewModel._responseResult?.observe(viewLifecycleOwner, Observer { result ->
             result?.let {
-                println("**** response result " + it)
                 viewModel.extractUrl(it, requireContext())
             }
         })
@@ -108,7 +95,7 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
 
     override fun onClick(v: View?) {
         when (v?.id) {
-            com.example.ytsample.R.id.close_btn -> {
+            R.id.close_btn -> {
                 dismiss()
             }
         }
@@ -128,16 +115,7 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     fun downloadVideo(downloadedData: DownloadedData) {
         binding.recyclerView.visibility = View.GONE
         if (downloadedData.youtubeDlUrl != null) {
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val data =
-                Data.Builder().putString("downloadedData", Gson().toJson(downloadedData)).build()
-            val task = OneTimeWorkRequest.Builder(DownLoadFileWorkManager::class.java)
-                .setInputData(data)
-                .setConstraints(constraints).build()
-            WorkManager.getInstance(requireContext().applicationContext)
-                .beginUniqueWork(task.id.toString(), ExistingWorkPolicy.APPEND_OR_REPLACE, task)
-                .enqueue()
+            mainActivityViewModel.downloadvideo(downloadedData)
             val action =
                 YtBottomSheetFragmentDirections.actionYtBottomSheetFragmentToNavigationDownload(
                     downloadedData

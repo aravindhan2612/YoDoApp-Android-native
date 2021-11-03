@@ -1,7 +1,6 @@
-package com.example.ytsample.ui.downloads
+package com.example.ytsample.adapter
 
 import android.content.Context
-import android.util.SparseArray
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,9 +10,7 @@ import com.example.ytsample.databinding.YtItemBinding
 import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.entities.FormatsModel
 import com.example.ytsample.entities.VideoMeta
-import com.example.ytsample.entities.YtFile
 import com.example.ytsample.ui.bottomsheet.YtBottomSheetFragment
-import com.example.ytsample.ui.home.HomeFragment
 
 class YTAdapter(
     var list: ArrayList<FormatsModel>?,

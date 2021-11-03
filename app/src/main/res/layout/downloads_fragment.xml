@@ -42,7 +42,8 @@
         android:layout_height="wrap_content"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintTop_toBottomOf="@id/text_download"
-        tools:listitem="@layout/yt_download_item" />
+        tools:listitem="@layout/yt_download_item"
+        android:visibility="visible"/>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

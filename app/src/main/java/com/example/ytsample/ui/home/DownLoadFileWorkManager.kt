@@ -17,6 +17,7 @@ import java.io.OutputStream
 import java.net.URL
 import androidx.annotation.RequiresApi
 import androidx.work.*
+import com.example.ytsample.utils.Constants
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection
 
@@ -25,7 +26,6 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
     CoroutineWorker(context, workerParams) {
 
     companion object {
-        const val Progress = "Progress"
         private var liveDataHelper: LiveDataHelper? = null
         private var MEGABYTE: Long = 1024L * 1024L;
         var CHANNEL_ID: String = "YTSample"
@@ -94,15 +94,7 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
             val total: Long = bytesToMeg(connection.contentLength.toLong())
             val notifyId: Int = System.currentTimeMillis().toInt()
             setForeground(createForegroundInfo(downloadedData.downloadTitle, 0, 0, notifyId))
-            LiveDataHelper?.instance?.addData(
-                ProgressState(
-                    0,
-                    total,
-                    0,
-                    false,
-                    notifyId.toString()
-                )
-            )
+            setProgress(workDataOf(Constants.TITLE to downloadedData.downloadTitle))
             while (run {
                     count = input.read(data)
                     count
@@ -124,7 +116,7 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
                         100, notifyId
                     )
                 )
-                setProgress(workDataOf(Progress to percent))
+                setProgress(workDataOf(Constants.PROGRESS to percent))
             }
             delay(2000)
             setForeground(downloadFinished("Download completed", notifyId))

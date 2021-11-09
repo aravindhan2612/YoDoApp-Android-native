@@ -15,6 +15,7 @@ import com.android.volley.toolbox.Volley
 import com.evgenii.jsevaluator.JsEvaluator
 import com.evgenii.jsevaluator.interfaces.JsCallback
 import com.example.ytsample.entities.*
+import com.example.ytsample.utils.Dummy
 import com.example.ytsample.utils.YouTubeUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +64,9 @@ class YtBottomSheetViewModel : ViewModel() {
             val queue = Volley.newRequestQueue(context.applicationContext)
             var downnloadUrl = "https://youtube.com/watch?v="
             downnloadUrl += extractYTId(ytUrl)
+            withContext(Dispatchers.IO) {
+               Dummy().getVideo(ytUrl)
+            }
 //            val result = getVideoResponse(downnloadUrl)
 //            responseResult.value = result
 
@@ -75,7 +79,7 @@ class YtBottomSheetViewModel : ViewModel() {
                 Response.ErrorListener { responseResult.value = "Error" }) {
                 override fun getHeaders(): MutableMap<String, String> {
                     val headers: MutableMap<String, String> = HashMap()
-                    headers["User-agent"] = YouTubeUtils.USER_AGENT
+                   // headers["User-agent"] = YouTubeUtils.USER_AGENT
                     return headers
                 }
             }
@@ -88,7 +92,7 @@ class YtBottomSheetViewModel : ViewModel() {
             val url = URL(downnloadUrl)
             val connection = url?.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
-            connection.setRequestProperty("User-agent", YouTubeUtils.USER_AGENT)
+            //connection.setRequestProperty("User-agent", YouTubeUtils.USER_AGENT)
             connection.connect()
 
             val br = BufferedReader(InputStreamReader(connection.getInputStream()))
@@ -102,7 +106,7 @@ class YtBottomSheetViewModel : ViewModel() {
 
     fun getHeaders(): MutableMap<String, String> {
         val headers: MutableMap<String, String> = HashMap()
-        headers["User-agent"] = YouTubeUtils.USER_AGENT
+        //headers["User-agent"] = YouTubeUtils.USER_AGENT
         return headers
     }
 
@@ -296,10 +300,6 @@ class YtBottomSheetViewModel : ViewModel() {
                             }
                         }
                     }
-//                    url += "&sig=" + sigs[i]
-//                    val newFile =
-//                        YtFile(FORMAT_MAP.get(key), url)
-//                    ytFiles.put(key, newFile)
                     i++
                 }
             }
@@ -344,10 +344,10 @@ class YtBottomSheetViewModel : ViewModel() {
             val javascriptFile: String
             val url = URL(decipherFunctUrl)
             val urlConnection = url.openConnection() as HttpURLConnection
-            urlConnection.setRequestProperty(
-                "User-Agent",
-                YouTubeUtils.USER_AGENT
-            )
+//            urlConnection.setRequestProperty(
+//                "User-Agent",
+//                YouTubeUtils.USER_AGENT
+//            )
             try {
                 reader = BufferedReader(InputStreamReader(urlConnection.inputStream))
                 val sb = StringBuilder()
@@ -553,6 +553,5 @@ class YtBottomSheetViewModel : ViewModel() {
             }
         }
     }
-
 
 }

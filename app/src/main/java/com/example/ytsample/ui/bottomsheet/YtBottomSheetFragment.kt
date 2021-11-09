@@ -36,7 +36,8 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     private lateinit var binding: YtBottomSheetFragmentBinding
     val args: YtBottomSheetFragmentArgs by navArgs()
     private lateinit var mainActivity: MainActivity
-    private var adapter: YTAdapter? = null
+    private var videoAdapter: YTAdapter? = null
+    private var audioAdapter: YTAdapter? = null
 
 
     override fun onCreateView(
@@ -72,12 +73,17 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
                 viewModel.extractUrl(it, requireContext())
             }
         })
-        viewModel.text?.observe(viewLifecycleOwner, Observer {
+        viewModel.text?.observe(viewLifecycleOwner, Observer { ytMetaData ->
             binding.progressCircular.visibility = View.GONE
-            if (it != null && !it.list.isNullOrEmpty()) {
+            if (ytMetaData != null && !ytMetaData.list.isNullOrEmpty()) {
                 binding.titleTv.visibility = View.VISIBLE
-                binding.titleTv.text = it.meta?.title
-                initAdapter(it.list, it.meta)
+                binding.titleTv.text = ytMetaData.meta?.title
+                val audioList =
+                    ytMetaData.list.filter { it.adaptive?.mimeType?.contains("audio",true) == true || it.format?.mimeType?.contains("audio",true) == true }
+                val videoList =
+                    ytMetaData.list.filter {  it.adaptive?.mimeType?.contains("video",true) == true || it.format?.mimeType?.contains("video",true) == true}
+                initAudioAdapter(audioList as ArrayList<FormatsModel>, ytMetaData.meta)
+                initVideoAdapter(videoList as ArrayList<FormatsModel>,ytMetaData.meta)
                 viewModel.text = null
                 viewModel._responseResult = null
             }
@@ -102,18 +108,29 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     }
 
 
-    private fun initAdapter(list: ArrayList<FormatsModel>, meta: VideoMeta?) {
-        binding.recyclerView.visibility = View.VISIBLE
-        binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        adapter = YTAdapter(list, meta, requireContext(), this)
-        binding.recyclerView.adapter = adapter
-        binding.recyclerView.apply {
+    private fun initVideoAdapter(list: ArrayList<FormatsModel>, meta: VideoMeta?) {
+        binding.videoSectionTv.visibility = View.VISIBLE
+        binding.videoRecyclerView.visibility = View.VISIBLE
+        binding.videoRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+        videoAdapter = YTAdapter(list, meta, requireContext(), this)
+        binding.videoRecyclerView.adapter = videoAdapter
+        binding.videoRecyclerView.apply {
+            addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
+        }
+    }
+
+    private fun initAudioAdapter(list: ArrayList<FormatsModel>, meta: VideoMeta?) {
+        binding.audioRecyclerView.visibility = View.VISIBLE
+        binding.audioSectionTv.visibility = View.VISIBLE
+        binding.audioRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+        audioAdapter = YTAdapter(list, meta, requireContext(), this)
+        binding.audioRecyclerView.adapter = audioAdapter
+        binding.audioRecyclerView.apply {
             addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         }
     }
 
     fun downloadVideo(downloadedData: DownloadedData) {
-        binding.recyclerView.visibility = View.GONE
         if (downloadedData.youtubeDlUrl != null) {
             mainActivityViewModel.downloadvideo(downloadedData)
             val action =

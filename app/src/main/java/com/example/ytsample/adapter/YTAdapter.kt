@@ -31,11 +31,15 @@ class YTAdapter(
 
         override fun onClick(v: View?) {
             val fm = list?.get(adapterPosition)
-            val url = fm?.format?.url?:fm?.adaptive?.url
-            val qualityLabel = fm?.format?.qualityLabel?:fm?.adaptive?.qualityLabel
+            val url = fm?.format?.url ?: fm?.adaptive?.url
+            val isVideo = fm?.adaptive?.mimeType?.contains(
+                "video",
+                true
+            ) == true || fm?.format?.mimeType?.contains("video", true) == true
+            val bitrate = fm?.format?.bitrate ?: fm?.adaptive?.bitrate
             when (v?.id) {
                 R.id.button -> {
-                    homeFragment.downloadVideo(DownloadedData( url, meta?.title,qualityLabel))
+                    homeFragment.downloadVideo(DownloadedData(url, meta?.title, isVideo, bitrate,System.currentTimeMillis().toInt()))
                 }
             }
         }
@@ -44,13 +48,15 @@ class YTAdapter(
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val fm = list?.get(position)
         fm?.let {
-            if (it.format != null){
+            if (it.format != null) {
                 val videFormat = fm.format?.mimeType?.substringBefore(";")
-                var tv = if (it.format?.qualityLabel != null) fm.format?.qualityLabel+" $videFormat" else fm.format?.audioQuality
+                val tv =
+                    if (it.format?.qualityLabel != null) fm.format?.qualityLabel + " $videFormat" else fm.format?.audioQuality
                 holder.binding.textView.text = tv
-            } else if (it.adaptive != null){
+            } else if (it.adaptive != null) {
                 val videFormat = fm.adaptive?.mimeType?.substringBefore(";")
-                var tv = if (it.adaptive?.qualityLabel != null) fm.adaptive?.qualityLabel+" $videFormat" else fm.adaptive?.audioQuality
+                val tv =
+                    if (it.adaptive?.qualityLabel != null) fm.adaptive?.qualityLabel + " $videFormat" else fm.adaptive?.audioQuality
                 holder.binding.textView.text = tv
             }
 

@@ -5,21 +5,28 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.example.ytsample.entities.DownloadedData
-import com.example.ytsample.entities.ProgressState
 import com.example.ytsample.utils.YTNotification
 import com.google.gson.Gson
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStream
-import java.net.URL
-import androidx.annotation.RequiresApi
 import androidx.work.*
+import com.example.ytsample.entities.DownloadResult
 import com.example.ytsample.utils.Constants
-import kotlinx.coroutines.delay
-import java.net.HttpURLConnection
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.android.*
+import io.ktor.client.request.*
+import io.ktor.client.response.*
+import io.ktor.http.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.io.ByteReadChannel
+import kotlin.math.roundToInt
+import java.io.*
 
 
 class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) :
@@ -28,10 +35,9 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
     companion object {
         private var liveDataHelper: LiveDataHelper? = null
         private var MEGABYTE: Long = 1024L * 1024L;
-        var CHANNEL_ID: String = "YTSample"
+        private var isDownloadCompleted = false
+        private var progress = 0
 
-        var TAG: Int = 1001;
-        private var isNotified = false
     }
 
     init {
@@ -43,101 +49,58 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
      * in background, so it will not impact to main thread or UI
      *
      */
+
     override suspend fun doWork(): ListenableWorker.Result {
-        try {
-            val downloadedData: DownloadedData =
-                Gson().fromJson(
-                    inputData.getString("downloadedData"),
-                    DownloadedData::class.java
-                )
-            val url = URL(downloadedData.youtubeDlUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connect()
-            // input stream to read file - with 8k buffer
-            val input = BufferedInputStream(url.openStream(), 8192)
-            var output: OutputStream? = null
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val resolver = applicationContext.contentResolver
-                val values = ContentValues()
-                values.put(
-                    MediaStore.MediaColumns.DISPLAY_NAME,
-                    "file_${System.currentTimeMillis()}.mp4"
-                )
-
-                values.put(
-                    MediaStore.MediaColumns.RELATIVE_PATH,
-                    Environment.DIRECTORY_DOWNLOADS
-                )
-                val uri =
-                    resolver.insert(MediaStore.Files.getContentUri("external"), values)
-
-                // Output stream to write file
-                output = uri?.let { resolver.openOutputStream(it) }
-            } else {
-                var file = File(
-                    Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
-                    ),
-                    if (downloadedData.fileName != null) "file_${System.currentTimeMillis()}.mp4" else "file_${System.currentTimeMillis()}.mp3"
-                )
-                // Output stream to write file
-                output = FileOutputStream(file, true)
-
-
+        val downloadedData: DownloadedData =
+            Gson().fromJson(
+                inputData.getString("downloadedData"),
+                DownloadedData::class.java
+            )
+        val ktor = HttpClient(Android){
+            engine {
+                threadsCount = 4
+                pipelining = true
             }
+        }
 
-            val data = ByteArray(1024)
-
-            var count: Int? = 0
-            var bytesDownloaded: Int = 0
-
-            val total: Long = bytesToMeg(connection.contentLength.toLong())
-            val notifyId: Int = System.currentTimeMillis().toInt()
-            setForeground(createForegroundInfo(downloadedData.downloadTitle, 0, 0, notifyId))
-            setProgress(workDataOf(Constants.TITLE to downloadedData.downloadTitle))
-            while (run {
-                    count = input.read(data)
-                    count
-                } != -1) {
-                count?.let { bytesDownloaded += it }
-                output?.write(data, 0, count!!)
-                val percent = (bytesDownloaded * 100 / connection.contentLength)
-
-                liveDataHelper?.updatePercentage(
-                    ProgressState(
-                        percent,
-                        total, bytesToMeg(bytesDownloaded.toLong()), false, notifyId.toString()
+        val notifyId: Int = System.currentTimeMillis().toInt()
+        setForeground(
+            createForegroundInfo(
+                downloadedData.downloadTitle,
+                0,
+                0,
+                notifyId, 0
+            )
+        )
+        ktor.downloadFile(applicationContext, downloadedData,ktor).collect {
+            when (it) {
+                is DownloadResult.Success -> {
+                    setForeground(downloadFinished("Download completed", notifyId))
+                }
+                is DownloadResult.Error -> {
+                    Toast.makeText(applicationContext,"failed to download ",Toast.LENGTH_LONG).show()
+                }
+                is DownloadResult.Progress -> {
+                    setForeground(
+                        createForegroundInfo(
+                            downloadedData.downloadTitle,
+                            it.progress,
+                            100, notifyId, it.downloadedData
+                        )
                     )
-                )
-                setForegroundAsync(
-                    createForegroundInfo(
-                        downloadedData.downloadTitle,
-                        percent,
-                        100, notifyId
-                    )
-                )
-                setProgress(workDataOf(Constants.PROGRESS to percent))
+                    setProgress(workDataOf(Constants.PROGRESS to it.progress))
+                }
             }
-            delay(2000)
-            setForeground(downloadFinished("Download completed", notifyId))
-            // flushing output
-            output?.flush()
-            // closing streams
-            output?.close()
-            input.close()
-            liveDataHelper?.updatePercentage(ProgressState(null, null, null, true,notifyId.toString()))
-
-        } catch (e: Exception) {
-            return Result.retry()
         }
 
         return Result.success()
     }
 
+
     private fun createForegroundInfo(
         downloadTitle: String?,
         progress: Int,
-        max: Int, id: Int
+        max: Int, id: Int, data: Int
     ): ForegroundInfo {
 
         val context = applicationContext
@@ -156,7 +119,12 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
                 ?.setProgress(max, progress, false)
                 ?.setOnlyAlertOnce(true)
                 ?.setAutoCancel(false)
-                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
+                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                ?.setStyle(
+                    NotificationCompat.InboxStyle()
+                        .addLine("$progress%").addLine(data.toString())
+                )
+                ?.build()
 
         return ForegroundInfo(id, notification!!)
 
@@ -190,17 +158,80 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
         YTNotification(applicationContext).createNotificationChannel()
     }
 
-    private fun bytesToMeg(bytes: Long): Long {
-        return bytes / MEGABYTE
+    private fun bytesToMeg(bytes: Float): Float {
+        return (bytes / MEGABYTE)
+    }
+
+    @Throws(IOException::class)
+    private suspend fun HttpClient.downloadFile(
+        ctx: Context,
+        downloadedData: DownloadedData,
+        ktor: HttpClient
+    ): Flow<DownloadResult> {
+        return flow {
+            try {
+                val response: HttpResponse = ktor.get(downloadedData.youtubeDlUrl!!){
+                    headers{
+                       // append(HttpHeaders.UserAgent,YouTubeUtils.USER_AGENT)
+                    }
+                }
+                var output: OutputStream? = null
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val resolver = ctx.applicationContext.contentResolver
+                    val values = ContentValues()
+                    values.put(
+                        MediaStore.MediaColumns.DISPLAY_NAME,
+                        if (downloadedData.isVideo == true) "file_${System.currentTimeMillis()}.mp4" else "file_${System.currentTimeMillis()}.mp3"
+                    )
+                    values.put(
+                        MediaStore.MediaColumns.RELATIVE_PATH,
+                        Environment.DIRECTORY_DOWNLOADS
+                    )
+                    val uri =
+                        resolver.insert(MediaStore.Files.getContentUri("external"), values)
+
+                    // Output stream to write file
+                    output = uri?.let { resolver.openOutputStream(it) }
+                } else {
+                    var file = File(
+                        Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_DOWNLOADS
+                        ),
+                        if (downloadedData.isVideo == true) "file_${System.currentTimeMillis()}.mp4" else "file_${System.currentTimeMillis()}.mp3"
+                    )
+                    // Output stream to write file
+                    output = FileOutputStream(file, true)
+                }
+
+
+                val channel = response.receive<ByteReadChannel>()
+                val contentLen = response.contentLength()?.toInt() ?: 0
+                val data = ByteArray(contentLen)
+                val byteBufferSize = (1024 * 1024) * 16
+                var offset = 0
+                do {
+                    val currentRead = channel.readAvailable(data, offset, data.size)
+                    offset += currentRead
+                    val mb = offset
+                    val progress = (mb * 100f / data.size).roundToInt()
+                    emit(DownloadResult.Progress(progress, mb))
+                } while (currentRead > 0)
+
+                response.close()
+
+                if (response.status.isSuccess()) {
+                    withContext(Dispatchers.IO) {
+                        output?.write(data)
+                    }
+                    emit(DownloadResult.Success)
+                } else {
+                    emit(DownloadResult.Error("File not downloaded"))
+                }
+            } catch (e: TimeoutCancellationException) {
+                emit(DownloadResult.Error("Connection timed out", e))
+            } catch (t: Throwable) {
+                emit(DownloadResult.Error("Failed to connect"))
+            }
+        }
     }
 }
-
-//function formatSizeUnits(bytes){
-//    if      (bytes >= 1073741824) { bytes = (bytes / 1073741824).toFixed(2) + " GB"; }
-//    else if (bytes >= 1048576)    { bytes = (bytes / 1048576).toFixed(2) + " MB"; }
-//    else if (bytes >= 1024)       { bytes = (bytes / 1024).toFixed(2) + " KB"; }
-//    else if (bytes > 1)           { bytes = bytes + " bytes"; }
-//    else if (bytes == 1)          { bytes = bytes + " byte"; }
-//    else                          { bytes = "0 bytes"; }
-//    return bytes;
-//}

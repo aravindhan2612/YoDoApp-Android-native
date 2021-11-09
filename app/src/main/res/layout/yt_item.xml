@@ -15,8 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:cardCornerRadius="5dp"
-        android:elevation="5dp"
-        app:cardBackgroundColor="#E3DDD7">
+        android:elevation="5dp">
 
         <LinearLayout
             android:id="@+id/ll_parent"

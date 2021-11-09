@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">YTSample</string>
+    <string name="app_name">YoDo</string>
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
@@ -9,4 +9,6 @@
     <string name="channel_name">YTChannel</string>
     <string name="channel_description">Downlaod progress</string>
     <string name="generating_downloading_links">Generating downloading links</string>
+    <string name="audio_download_links">AUDIO DOWNLOAD LINKS</string>
+    <string name="video_download_links">VIDEO DOWNLOAD Links</string>
 </resources>

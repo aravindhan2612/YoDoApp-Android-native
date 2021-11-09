@@ -41,7 +41,7 @@ import java.util.regex.Pattern
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val workManager = WorkManager.getInstance(application)
+    val workManager = WorkManager.getInstance(application)
     internal val outputWorkInfos: LiveData<List<WorkInfo>>
     internal val progressWorkInfoItems: LiveData<List<WorkInfo>>
 

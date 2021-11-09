@@ -7,12 +7,11 @@ import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.example.ytsample.BuildConfig.DEBUG
 
-class ApplicationClass : Application() ,Configuration.Provider{
+class ApplicationClass : Application() {
 
 
     override fun onCreate() {
         super.onCreate()
-        //workManager = WorkManager.getInstance(this)
     }
 
 
@@ -28,18 +27,6 @@ class ApplicationClass : Application() ,Configuration.Provider{
 
     private fun getInstance(): Context {
         return this.applicationContext
-    }
-
-    override fun getWorkManagerConfiguration(): Configuration {
-        return if (DEBUG) {
-            Configuration.Builder()
-                .setMinimumLoggingLevel(Log.DEBUG)
-                .build()
-        } else {
-            Configuration.Builder()
-                .setMinimumLoggingLevel(Log.ERROR)
-                .build()
-        }
     }
 
 }

@@ -1,52 +1,31 @@
 package com.example.ytsample.utils
 
 import android.app.Application
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
-import android.util.SparseArray
 import androidx.lifecycle.*
 import androidx.work.*
-import com.android.volley.Request
-import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
-import com.evgenii.jsevaluator.JsEvaluator
-import com.evgenii.jsevaluator.interfaces.JsCallback
+import com.example.ytsample.database.YoDoDatabase
 import com.example.ytsample.entities.*
-import com.example.ytsample.ui.bottomsheet.YtBottomSheetFragmentDirections
-import com.example.ytsample.ui.home.DownLoadFileWorkManager
-import com.example.ytsample.utils.Constants.Companion.DOWNLOAD_VIDEO
+import com.example.ytsample.respository.YoDoRespository
+import com.example.ytsample.wm.DownLoadFileWorkManager
 import com.example.ytsample.utils.Constants.Companion.TAG_OUTPUT
 import com.example.ytsample.utils.Constants.Companion.TAG_PROGRESS
-import com.example.ytsample.utils.YouTubeUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.*
-import java.lang.Exception
-import java.lang.StringBuilder
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLDecoder
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val workManager = WorkManager.getInstance(application)
     internal val outputWorkInfos: LiveData<List<WorkInfo>>
     internal val progressWorkInfoItems: LiveData<List<WorkInfo>>
+    val ytDownloadLiveDataList = MutableLiveData<List<YTDownloadData>>()
+    val yoDoRespository: YoDoRespository
+    val yodoDB: YoDoDatabase
 
     init {
-
+        yodoDB = YoDoDatabase.getDatabase(application)
+        yoDoRespository = YoDoRespository(yodoDB.notifyDAO())
         outputWorkInfos = workManager.getWorkInfosByTagLiveData(TAG_OUTPUT)
         progressWorkInfoItems = workManager.getWorkInfosByTagLiveData(TAG_PROGRESS)
     }
@@ -58,7 +37,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     internal fun downloadvideo(downloadedData: DownloadedData) {
-
         val constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val task = OneTimeWorkRequest.Builder(DownLoadFileWorkManager::class.java)
@@ -67,7 +45,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .setConstraints(constraints).build()
         workManager.beginUniqueWork(task.id.toString(), ExistingWorkPolicy.APPEND_OR_REPLACE, task)
             .enqueue()
+        val data = YTDownloadData(
+            null,
+            downloadedData.downloadTitle,
+            task.id.toString(),
+            false,
+            downloadedData.fileName
+        )
+        insertData(data)
+    }
 
+    fun getDownloadDataById() {
+        viewModelScope.launch {
+            yoDoRespository.allData.collect {
+                if (it.isNotEmpty())
+                    ytDownloadLiveDataList.value = it
+            }
+        }
+    }
+
+    private fun insertData(data: YTDownloadData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            yoDoRespository.insert(data)
+        }
+    }
+
+    fun deleteData(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            yoDoRespository.deleteById(id)
+        }
+    }
+
+    fun update(id: String, isDownload: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            yoDoRespository.update(id, isDownload)
+        }
     }
 
 }

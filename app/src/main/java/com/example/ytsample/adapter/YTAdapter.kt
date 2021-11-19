@@ -36,10 +36,11 @@ class YTAdapter(
                 "video",
                 true
             ) == true || fm?.format?.mimeType?.contains("video", true) == true
-            val bitrate = fm?.format?.bitrate ?: fm?.adaptive?.bitrate
+            val title = meta?.title?.substringBefore(":")
+            val fileName =if (isVideo) "${title}${System.currentTimeMillis()}.mp4" else "${title}${System.currentTimeMillis()}.mp3"
             when (v?.id) {
                 R.id.button -> {
-                    homeFragment.downloadVideo(DownloadedData(url, meta?.title, isVideo, bitrate,System.currentTimeMillis().toInt()))
+                    homeFragment.downloadVideo(DownloadedData(url, meta?.title, fileName,System.currentTimeMillis().toInt()))
                 }
             }
         }

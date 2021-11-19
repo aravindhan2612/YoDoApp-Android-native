@@ -1,25 +1,28 @@
 package com.example.ytsample.adapter
 
 import android.content.Context
+import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
-import androidx.work.WorkManager
+import com.example.ytsample.R
 import com.example.ytsample.databinding.YtDownloadItemBinding
-import com.example.ytsample.entities.ProgressState
+import com.example.ytsample.entities.YTDownloadData
 import com.example.ytsample.ui.downloads.DownloadsFragment
-import com.example.ytsample.ui.home.LiveDataHelper
 import com.example.ytsample.utils.Constants
 import com.example.ytsample.utils.MainViewModel
+import kotlinx.coroutines.launch
+import java.io.File
 
 class YTDownloadAdapter(
     var list: List<WorkInfo>?,
     var context: Context,
-    val downloadsFragment: DownloadsFragment
+    private val downloadsFragment: DownloadsFragment
 ) : RecyclerView.Adapter<YTDownloadAdapter.Holder>() {
 
     private lateinit var ytDownloadItemBinding: YtDownloadItemBinding
@@ -36,23 +39,35 @@ class YTDownloadAdapter(
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
+        mainViewModel?.getDownloadDataById()
         val item = list?.get(position)
-        println("***** item state " + item?.state + "  id " + item?.id)
         if (item != null && (item.state != WorkInfo.State.CANCELLED)) {
-
             if (item.state == WorkInfo.State.RUNNING) {
                 val progress = item.progress.getInt(Constants.PROGRESS, 0)
-                holder.binding.downloadProgressBar.progress = progress
+                holder.binding.downloadProgressBar.setProgressCompat(progress, true)
                 holder.binding.percent.text = "$progress%"
+                mainViewModel?.ytDownloadLiveDataList?.observe(
+                    downloadsFragment,
+                    Observer { list ->
+                        if (list != null)
+                            holder.binding.titleTv.text =
+                                list?.filter { it.id == item?.id.toString() }?.single()?.title
+                    })
+
             }
             if (item.state.isFinished) {
-                // println("***** item state " + item.state + "  id " + item.id)
                 holder.binding.downloadProgressBar.visibility = View.GONE
                 holder.binding.titleTv.visibility = View.GONE
                 holder.binding.percent.visibility = View.GONE
                 holder.binding.cardView.visibility = View.GONE
                 mainViewModel?.workManager?.cancelUniqueWork(item.id.toString())
+                mainViewModel?.update(item.id.toString(), true)
             }
+        } else {
+            holder.binding.downloadProgressBar.visibility = View.GONE
+            holder.binding.titleTv.visibility = View.GONE
+            holder.binding.percent.visibility = View.GONE
+            holder.binding.cardView.visibility = View.GONE
         }
     }
 
@@ -71,9 +86,41 @@ class YTDownloadAdapter(
 
         init {
             binding.titleTv.setOnClickListener(this)
+            binding.cancelButton.setOnClickListener(this)
         }
 
         override fun onClick(v: View?) {
+            when (v?.id) {
+                R.id.cancel_button -> {
+                    val item = list?.get(adapterPosition)
+                    var element: YTDownloadData? = null
+                    mainViewModel?.workManager?.cancelUniqueWork(item?.id.toString())
+                    mainViewModel?.ytDownloadLiveDataList?.observe(
+                        downloadsFragment,
+                        Observer { list ->
+                            element = list?.filter { it.id == item?.id.toString() }?.single()
+                        })
+                    element?.let {
+                        val file = File(
+                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                            it.fileName
+                        )
+                        println("***** external file " + file)
+                        if (file?.exists()) {
+                            file.delete()
+                            mainViewModel?.deleteData(item?.id.toString())
+                            Toast.makeText(context, "Deleted ${it.title}", Toast.LENGTH_LONG)
+                                .show()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Error on deleting file from device ${it.title}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
         }
     }
 }

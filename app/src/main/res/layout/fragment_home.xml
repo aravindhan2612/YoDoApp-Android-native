@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#E9ECEB"
     tools:context=".ui.home.HomeFragment">
 
     <LinearLayout
@@ -30,8 +31,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:drawableRight="@drawable/ic_baseline_search_24"
             android:layout_marginStart="5dp"
-            android:text=" download"
+            android:text="@string/search"
             app:shapeAppearance ="@style/ShapeAppearance.MaterialComponents.SmallComponent"
             android:textColor="@color/black"
             android:backgroundTint="@color/teal_200"

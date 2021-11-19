@@ -8,22 +8,20 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.volley.Request
 import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.evgenii.jsevaluator.JsEvaluator
 import com.evgenii.jsevaluator.interfaces.JsCallback
 import com.example.ytsample.entities.*
-import com.example.ytsample.utils.Dummy
 import com.example.ytsample.utils.YouTubeUtils
 import com.google.gson.Gson
+import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import retrofit2.http.HTTP
 import java.io.*
 import java.lang.Exception
 import java.lang.StringBuilder
@@ -38,8 +36,8 @@ import java.util.regex.Pattern
 
 
 class YtBottomSheetViewModel : ViewModel() {
-    var responseResult = MutableLiveData<String>()
-    var _responseResult: LiveData<String>? = responseResult
+    var responseResult = MutableLiveData<JSONObject?>()
+    var responseJsonResult: LiveData<JSONObject?>? = responseResult
     var encSignatures = ArrayList<Signature>()
     private var decipherJsFileName: String? = null
     private var decipherFunctions: String? = null
@@ -62,24 +60,27 @@ class YtBottomSheetViewModel : ViewModel() {
     fun getRequest(context: Context, ytUrl: String?, fragment: YtBottomSheetFragment) {
         viewModelScope.launch {
             val queue = Volley.newRequestQueue(context.applicationContext)
-            var downnloadUrl = "https://youtube.com/watch?v="
-            downnloadUrl += extractYTId(ytUrl)
-            withContext(Dispatchers.IO) {
-               Dummy().getVideo(ytUrl)
-            }
-//            val result = getVideoResponse(downnloadUrl)
-//            responseResult.value = result
+            var downloadUrl = "https://www.youtube.com/youtubei/v1/player?videoId="
+            downloadUrl += getVideoId(ytUrl)
+            downloadUrl =
+                "$downloadUrl&key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&contentCheckOk=True&racyCheckOk=True"
+            val json =
+                "{\"context\": {\"client\": {\"clientName\": \"ANDROID\", \"clientVersion\": \"16.20\"}}}"
+            val jsonObject = JSONObject(json)
 
-            val stringRequest = object : StringRequest(
-                Request.Method.GET, downnloadUrl,
-                Response.Listener<String> { response ->
+            val stringRequest = object : JsonObjectRequest(Method.POST, downloadUrl, jsonObject,
+                Response.Listener<JSONObject> { response ->
                     responseResult.value = response
 
                 },
-                Response.ErrorListener { responseResult.value = "Error" }) {
+                Response.ErrorListener {
+                    responseResult.value = null
+                }) {
                 override fun getHeaders(): MutableMap<String, String> {
                     val headers: MutableMap<String, String> = HashMap()
-                   // headers["User-agent"] = YouTubeUtils.USER_AGENT
+                    headers[HttpHeaders.UserAgent] = "Mozilla/5.0"
+                    headers["Accept-language"] = "en-US,en"
+                    headers["Content-type"] = "application/json"
                     return headers
                 }
             }
@@ -87,60 +88,25 @@ class YtBottomSheetViewModel : ViewModel() {
         }
     }
 
-    private suspend fun getVideoResponse(downnloadUrl: String): String =
-        withContext(Dispatchers.IO) {
-            val url = URL(downnloadUrl)
-            val connection = url?.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            //connection.setRequestProperty("User-agent", YouTubeUtils.USER_AGENT)
-            connection.connect()
-
-            val br = BufferedReader(InputStreamReader(connection.getInputStream()))
-            var sb = StringBuilder()
-            var output: String?
-            while (br.readLine().also { output = it } != null) {
-                sb.append(output)
-            }
-            return@withContext sb.toString()
-        }
-
-    fun getHeaders(): MutableMap<String, String> {
-        val headers: MutableMap<String, String> = HashMap()
-        //headers["User-agent"] = YouTubeUtils.USER_AGENT
-        return headers
-    }
-
-    fun extractUrl(response: String, context: Context) {
+    fun extractUrl(ytPlayerResponse: JSONObject, context: Context) {
         viewModelScope.launch {
             cacheDirPath = context.cacheDir.absolutePath
             var videoMeta: VideoMeta? = null
             val result = withContext(Dispatchers.IO) {
-                var mat: Matcher = YouTubeUtils.patPlayerResponse.matcher(
-                    response
-                )
-                if (mat.find()) {
-                    val ytPlayerResponse = JSONObject(mat.group(1))
                     val streamingData = ytPlayerResponse.getJSONObject("streamingData")
                     val formats = streamingData.getJSONArray("formats")
                     val videoDetails = ytPlayerResponse.getJSONObject("videoDetails")
                     val adaptiveFormats = streamingData.getJSONArray("adaptiveFormats")
                     videoMeta = getVideMetaData(videoDetails)
-                    appendFormats(mat, formats)
-                    appendAdaptiveFormats(mat, adaptiveFormats)
-                } else {
-                    Log.d(
-                        LOG_TAG,
-                        "ytPlayerResponse was not found"
-                    )
-                }
-                test(response, context)
+                    appendFormats( formats)
+                    appendAdaptiveFormats(adaptiveFormats)
             }
             _text.value = YTMetaData(formatModelList, videoMeta)
         }
     }
 
-    private fun appendFormats(matcher: Matcher, formats: JSONArray) {
-        var mat: Matcher = matcher
+    private fun appendFormats( formats: JSONArray) {
+        var mat: Matcher
         var gson = Gson()
         for (i in 0 until formats.length()) {
             val format = formats.getJSONObject(i)
@@ -153,6 +119,7 @@ class YtBottomSheetViewModel : ViewModel() {
             val itag = format.getInt("itag")
             if (format.has("url")) {
                 ytFormat.url = format.getString("url").replace("\\u0026", "&")
+                println("****** url formats " + ytFormat.url)
             } else if (format.has("signatureCipher")) {
                 mat =
                     YouTubeUtils.patSigEncUrl.matcher(
@@ -172,8 +139,8 @@ class YtBottomSheetViewModel : ViewModel() {
         }
     }
 
-    private fun appendAdaptiveFormats(matcher: Matcher, adaptiveFormats: JSONArray) {
-        var mat: Matcher = matcher
+    private fun appendAdaptiveFormats(adaptiveFormats: JSONArray) {
+        var mat: Matcher
         val gson = Gson()
         for (i in 0 until adaptiveFormats.length()) {
             val adaptiveFormat: JSONObject = adaptiveFormats.getJSONObject(i)
@@ -183,6 +150,7 @@ class YtBottomSheetViewModel : ViewModel() {
             val itag = adaptiveFormat.getInt("itag")
             if (adaptiveFormat.has("url")) {
                 ytFormat.url = adaptiveFormat.getString("url").replace("\\u0026", "&")
+                println("****** url adaptive " + ytFormat.url)
             } else if (adaptiveFormat.has("signatureCipher")) {
                 mat = YouTubeUtils.patSigEncUrl.matcher(
                     adaptiveFormat.getString("signatureCipher")
@@ -294,9 +262,11 @@ class YtBottomSheetViewModel : ViewModel() {
                             if (value.adaptive?.url != null) {
                                 value.adaptive?.url += "&sig=" + sigs[i]
                                 formatModelList[index].adaptive = value.adaptive
+                                println("****** url sig formats " + value.adaptive?.url)
                             } else if (value.format?.url != null) {
                                 value.format?.url += "&sig=" + sigs[i]
                                 formatModelList[index].format = value.format
+                                println("****** url sig formats " + value.format?.url)
                             }
                         }
                     }

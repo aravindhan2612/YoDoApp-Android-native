@@ -70,69 +70,10 @@ class DownloadsFragment : Fragment() {
         mainActivityViewModel.progressWorkInfoItems.observe(viewLifecycleOwner, progressObserver())
     }
 
-    private fun initAdapter1(data: ArrayList<DownloadedData>) {
-        if (adapter == null) {
-//            adapter = YTDownloadAdapter2(data){
-//                manageClickAdapter(it)
-//            }
-            _binding.recyclerView.adapter = adapter
-            _binding.recyclerView.apply {
-                addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
-            }
-        }
-    }
-
-    private fun manageClickAdapter(it: DownloadedData) {
-        var output: OutputStream? = null
-            var file: File? = null
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val resolver = requireContext().contentResolver
-                val values = ContentValues()
-                values.put(
-                    MediaStore.MediaColumns.DISPLAY_NAME,
-                    if (it.isVideo == true) "file_${System.currentTimeMillis()}.mp4" else "file_${System.currentTimeMillis()}.mp3"
-                )
-                values.put(
-                    MediaStore.MediaColumns.RELATIVE_PATH,
-                    Environment.DIRECTORY_DOWNLOADS
-                )
-                val uri =
-                    resolver.insert(MediaStore.Files.getContentUri("external"), values)
-
-                // Output stream to write file
-                file = File(uri!!.toString())
-                output = uri?.let { resolver.openOutputStream(it) }
-            } else {
-                file = File(
-                    Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
-                    ),
-                    if (it.isVideo == true) "file_${System.currentTimeMillis()}.mp4" else "file_${System.currentTimeMillis()}.mp3"
-                )
-                // Output stream to write file
-                output = FileOutputStream(file, true)
-            }
-        when {
-            it.isDownloading -> {
-                //Do nothing
-            }
-            else -> {
-                try {
-                    downloadWithFlow(it,file)
-                } catch (e: Exception) {
-                    //generic error while downloading
-                }
-            }
-        }
-    }
-
     private fun initAdapter(list: List<WorkInfo>?) {
         if (adapter == null) {
             adapter = YTDownloadAdapter(list, requireContext(), this)
             _binding.recyclerView.adapter = adapter
-            _binding.recyclerView.apply {
-                addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
-            }
         }
     }
 
@@ -144,65 +85,19 @@ class DownloadsFragment : Fragment() {
     private fun progressObserver(): Observer<List<WorkInfo>> {
         return Observer { listOfWorkInfo ->
             if (listOfWorkInfo.isNullOrEmpty()) {
-                _binding.textDownload.visibility = View.VISIBLE
                 _binding.recyclerView.visibility = View.GONE
                 return@Observer
             }
 
             listOfWorkInfo?.let {
                 _binding.recyclerView.visibility = View.VISIBLE
-                _binding.textDownload.visibility = View.GONE
                 _binding.recyclerView.adapter = adapter
                 adapter?.refreshList(it as ArrayList<WorkInfo>)
             }
+            val isRunning =listOfWorkInfo.any { it.state == WorkInfo.State.RUNNING }
+            _binding.textDownload.visibility = if(isRunning) View.GONE else View.VISIBLE
+            _binding.recyclerView.visibility = if(isRunning) View.VISIBLE else View.GONE
 
-        }
-    }
-    private fun downloadWithFlow(dummy: DownloadedData,file:File) {
-
-        CoroutineScope(Dispatchers.IO).launch {
-            var ktor = HttpClient(Android)
-            ktor.downloadFile(file,dummy.youtubeDlUrl!!).collect {
-                withContext(Dispatchers.Main) {
-                    when (it) {
-                        is DownloadResult.Success -> {
-                      //      adapter?.setDownloading(dummy, false)
-                        }
-                        is DownloadResult.Error -> {
-                           // adapter?.setDownloading(dummy, false)
-                            Toast.makeText(requireContext(), "Error while downloading ${dummy.downloadTitle}", Toast.LENGTH_LONG).show()
-                        }
-                        is DownloadResult.Progress -> {
-                           // adapter?.setProgress(dummy, it.progress)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun HttpClient.downloadFile(file: File, url: String): Flow<DownloadResult> {
-        return flow {
-            val response = call {
-                url(url)
-                method = HttpMethod.Get
-            }.response
-            val data = ByteArray(response.contentLength()!!.toInt())
-            var offset = 0
-            do {
-                val currentRead = response.content.readAvailable(data, offset, data.size)
-                offset += currentRead
-                val mb = offset
-                val progress = (mb * 100f / data.size).roundToInt()
-                emit(DownloadResult.Progress(progress,mb))
-            } while (currentRead > 0)
-            response.close()
-            if (response.status.isSuccess()) {
-                file.writeBytes(data)
-                emit(DownloadResult.Success)
-            } else {
-                emit(DownloadResult.Error("File not downloaded"))
-            }
         }
     }
 }

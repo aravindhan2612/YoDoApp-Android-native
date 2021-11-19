@@ -7,8 +7,7 @@ import kotlinx.android.parcel.Parcelize
 data class DownloadedData(
     var youtubeDlUrl: String?,
     var downloadTitle: String?,
-    var isVideo: Boolean?,
-    var bitrate: Int?,
+    var fileName: String?,
     var id:Int?
 ) : Parcelable {
     var isDownloading: Boolean = false

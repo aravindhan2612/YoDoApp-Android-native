@@ -11,7 +11,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.work.*
 import com.example.ytsample.MainActivity
 import com.example.ytsample.R
 import com.example.ytsample.databinding.YtBottomSheetFragmentBinding
@@ -19,10 +18,8 @@ import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.entities.FormatsModel
 import com.example.ytsample.entities.VideoMeta
 import com.example.ytsample.adapter.YTAdapter
-import com.example.ytsample.ui.home.DownLoadFileWorkManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.snackbar.Snackbar
-import com.google.gson.Gson
 
 import androidx.recyclerview.widget.DividerItemDecoration
 import com.example.ytsample.utils.MainViewModel
@@ -68,9 +65,11 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     }
 
     private fun initObserver() {
-        viewModel._responseResult?.observe(viewLifecycleOwner, Observer { result ->
-            result?.let {
-                viewModel.extractUrl(it, requireContext())
+        viewModel.responseJsonResult?.observe(viewLifecycleOwner, Observer { result ->
+            if (result != null) {
+                viewModel.extractUrl(result, requireContext())
+            } else {
+                binding.titleTv.text = getString(R.string.no_data)
             }
         })
         viewModel.text?.observe(viewLifecycleOwner, Observer { ytMetaData ->
@@ -79,13 +78,23 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
                 binding.titleTv.visibility = View.VISIBLE
                 binding.titleTv.text = ytMetaData.meta?.title
                 val audioList =
-                    ytMetaData.list.filter { it.adaptive?.mimeType?.contains("audio",true) == true || it.format?.mimeType?.contains("audio",true) == true }
+                    ytMetaData.list.filter {
+                        it.adaptive?.mimeType?.contains(
+                            "audio",
+                            true
+                        ) == true || it.format?.mimeType?.contains("audio", true) == true
+                    }
                 val videoList =
-                    ytMetaData.list.filter {  it.adaptive?.mimeType?.contains("video",true) == true || it.format?.mimeType?.contains("video",true) == true}
+                    ytMetaData.list.filter {
+                        it.adaptive?.mimeType?.contains(
+                            "video",
+                            true
+                        ) == true || it.format?.mimeType?.contains("video", true) == true
+                    }
                 initAudioAdapter(audioList as ArrayList<FormatsModel>, ytMetaData.meta)
-                initVideoAdapter(videoList as ArrayList<FormatsModel>,ytMetaData.meta)
+                initVideoAdapter(videoList as ArrayList<FormatsModel>, ytMetaData.meta)
                 viewModel.text = null
-                viewModel._responseResult = null
+                viewModel.responseJsonResult = null
             }
         })
     }

@@ -6,9 +6,10 @@ import android.util.Log
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.example.ytsample.BuildConfig.DEBUG
+import com.example.ytsample.database.YoDoDatabase
+import com.example.ytsample.respository.YoDoRespository
 
 class ApplicationClass : Application() {
-
 
     override fun onCreate() {
         super.onCreate()
@@ -19,6 +20,7 @@ class ApplicationClass : Application() {
         @JvmStatic
         var instances: Context? = null
         var workManager: WorkManager? = null
+
     }
 
     init {

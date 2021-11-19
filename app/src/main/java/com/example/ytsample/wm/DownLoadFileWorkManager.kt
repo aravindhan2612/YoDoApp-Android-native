@@ -1,0 +1,197 @@
+package com.example.ytsample.wm
+
+import android.content.ContentValues
+import android.content.Context
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
+import com.example.ytsample.entities.DownloadedData
+import com.example.ytsample.utils.YTNotification
+import com.google.gson.Gson
+import androidx.work.*
+import com.example.ytsample.network.RetrofitInterface
+import kotlinx.coroutines.*
+import java.io.*
+import okhttp3.ResponseBody
+import retrofit2.Retrofit
+import com.example.ytsample.entities.Download
+import com.example.ytsample.ui.home.LiveDataHelper
+import com.example.ytsample.utils.Constants
+import kotlinx.io.errors.IOException
+
+
+class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(context, workerParams) {
+
+    companion object {
+        private var liveDataHelper: LiveDataHelper? = null
+        private var MEGABYTE: Long = 1024L * 1024L;
+        private var isDownloadCompleted = false
+        var totalFileSize: Int = 0
+
+        //private var progress = 0
+        val GB: Long = 1000000000
+        val MB: Long = 1000000
+        val KB: Long = 1000
+        val min: Long = 60
+        val hours: Long = 3600
+        var body: ResponseBody? = null
+
+    }
+
+    init {
+        liveDataHelper = LiveDataHelper.instance
+    }
+
+    /**
+     * Workmanager worker thread which do processing
+     * in background, so it will not impact to main thread or UI
+     *
+     */
+
+    override suspend fun doWork(): ListenableWorker.Result {
+        withContext(Dispatchers.IO) {
+            val downloadedData: DownloadedData =
+                Gson().fromJson(
+                    inputData.getString("downloadedData"),
+                    DownloadedData::class.java
+                )
+
+            val notifyId: Int = System.currentTimeMillis().toInt()
+            val retrofit = Retrofit.Builder()
+                .baseUrl("http://localhost/")
+                .build()
+            val retrofitInterface = retrofit.create(RetrofitInterface::class.java)
+            val request = downloadedData.youtubeDlUrl?.let {
+                retrofitInterface.downloadFileUsingUrl(
+                    it
+                )
+            }
+            try {
+                request?.execute()?.body()?.let { downloadFile(it,downloadedData,notifyId) }
+            }catch (e:IOException) {
+
+                e.printStackTrace();
+                Toast.makeText(applicationContext," Error on downloading  link",Toast.LENGTH_SHORT).show();
+
+            }
+
+        }
+        return Result.success()
+    }
+
+    @Throws(IOException::class)
+    private fun downloadFile(
+        body: ResponseBody,
+        downloadedData: DownloadedData,
+        notifyId: Int
+    ) {
+        var count: Int
+        val data = ByteArray(1024 * 4)
+        val fileSize = body.contentLength()
+        val bis: InputStream = BufferedInputStream(body.byteStream(), 1024 * 8)
+        var output: OutputStream? = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver =applicationContext.contentResolver
+            val values = ContentValues()
+            values.put(
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                downloadedData.fileName
+            )
+            values.put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                Environment.DIRECTORY_DOWNLOADS
+            )
+            val uri =
+                resolver.insert(MediaStore.Files.getContentUri("external"), values)
+
+            // Output stream to write file
+            output = uri?.let { resolver.openOutputStream(it) }
+        } else {
+            val file = File(
+                Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS
+                ),
+                downloadedData.fileName
+            )
+            // Output stream to write file
+            output = FileOutputStream(file, true)
+        }
+        var total: Long = 0
+        val startTime = System.currentTimeMillis()
+        var timeCount = 1
+        while (bis.read(data).also { count = it } != -1) {
+            total += count.toLong()
+            totalFileSize = (fileSize / Math.pow(1024.0, 2.0)).toInt()
+            val current = Math.round(total / Math.pow(1024.0, 2.0)).toDouble()
+            val progress = (total * 100 / fileSize).toInt()
+            val currentTime = System.currentTimeMillis() - startTime
+            val download = Download()
+            download.totalFileSize = totalFileSize
+            if (currentTime > 1000 * timeCount) {
+                download.currentFileSize = current.toInt()
+                download.progress = progress
+                setForegroundAsync(createForegroundInfo(downloadedData.downloadTitle,100,notifyId,download))
+                setProgressAsync(workDataOf(Constants.PROGRESS to download.progress))
+                timeCount++
+            }
+            output?.write(data, 0, count)
+        }
+        output?.flush()
+        output?.close()
+        bis.close()
+    }
+
+    private fun createForegroundInfo(
+        downloadTitle: String?,
+        max: Int, id: Int, data: Download?
+    ): ForegroundInfo {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createChannel()
+        }
+        val builder = YTNotification(applicationContext).getNotificationBuilder()
+        val pendingIntent = YTNotification(applicationContext).getPendingIntent()
+        val notification =
+            builder?.setSmallIcon(com.example.ytsample.R.mipmap.ic_yo_do_launcher_icon)
+                ?.setContentTitle(downloadTitle)
+                ?.setContentText("${data?.progress}%")
+                ?.setContentIntent(pendingIntent)
+                ?.setProgress(max, data?.progress?:0, false)
+                ?.setOnlyAlertOnce(true)
+                ?.setAutoCancel(false)
+                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                ?.setCategory(NotificationCompat.CATEGORY_EVENT)
+                ?.setStyle(
+                    NotificationCompat.InboxStyle().addLine("${data?.currentFileSize} /${data?.totalFileSize} MB")
+                )
+                ?.build()
+        return ForegroundInfo(id, notification!!)
+    }
+
+    private fun downloadFinished(downloadTitle: String, id: Int): ForegroundInfo {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createChannel()
+        }
+        val builder = YTNotification(applicationContext).getNotificationBuilder()
+        val pendingIntent = YTNotification(applicationContext).getPendingIntent()
+        val notification =
+            builder?.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
+                ?.setContentTitle(downloadTitle)
+                ?.setContentIntent(pendingIntent)
+                ?.setProgress(0, 0, false)
+                ?.setOnlyAlertOnce(true)
+                ?.setAutoCancel(false)
+                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
+
+        return ForegroundInfo(id, notification!!)
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createChannel() {
+        YTNotification(applicationContext).createNotificationChannel()
+    }
+}

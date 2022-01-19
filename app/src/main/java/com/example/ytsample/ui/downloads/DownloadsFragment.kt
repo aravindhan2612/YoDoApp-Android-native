@@ -1,25 +1,18 @@
 package com.example.ytsample.ui.downloads
 
-import android.content.ContentValues
 import android.content.Context
-import android.os.Build
 import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.work.WorkInfo
-import com.example.ytsample.MainActivity
+import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.adapter.YTDownloadAdapter
 import com.example.ytsample.databinding.DownloadsFragmentBinding
-import com.example.ytsample.entities.DownloadResult
 import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.utils.MainViewModel
 import io.ktor.client.*
@@ -27,18 +20,6 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.android.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStream
-import java.lang.Exception
-import kotlin.math.roundToInt
 
 class DownloadsFragment : Fragment() {
 
@@ -96,7 +77,6 @@ class DownloadsFragment : Fragment() {
             }
             val isRunning =listOfWorkInfo.any { it.state == WorkInfo.State.RUNNING }
             _binding.textDownload.visibility = if(isRunning) View.GONE else View.VISIBLE
-            _binding.recyclerView.visibility = if(isRunning) View.VISIBLE else View.GONE
 
         }
     }

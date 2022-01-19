@@ -12,7 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
-import com.example.ytsample.MainActivity
+import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.R
 import com.example.ytsample.databinding.FragmentHomeBinding
 import com.google.android.material.snackbar.Snackbar
@@ -93,7 +93,7 @@ class HomeFragment : Fragment(), View.OnClickListener {
                     setErrorTV()
                 } else {
                     val action =
-                        HomeFragmentDirections.actionNavigationHomeToYtBottomSheetFragment(_binding.editUrl.text.toString())
+                        HomeFragmentDirections.actionNavigationHomeToYtBottomSheetFragment(_binding.editUrl.text.toString(),false)
                     findNavController().navigate(action)
                 }
             }

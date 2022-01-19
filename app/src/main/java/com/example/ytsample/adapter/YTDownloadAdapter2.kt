@@ -8,7 +8,6 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ytsample.R
 import com.example.ytsample.entities.DownloadedData
-import kotlinx.android.synthetic.main.yt_download_item.view.*
 
 class YTDownloadAdapter2(var dummyes: ArrayList<DownloadedData>, val listener: (DownloadedData) -> Unit) : RecyclerView.Adapter<ViewHolder>() {
 
@@ -20,9 +19,9 @@ class YTDownloadAdapter2(var dummyes: ArrayList<DownloadedData>, val listener: (
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val dummy = dummyes[position]
         with(holder.itemView) {
-            title_tv.text = dummy.downloadTitle
-            download_progress_bar.isVisible = dummy.isDownloading
-            download_progress_bar.isVisible = dummy.isDownloading
+//            title_tv.text = dummy.downloadTitle
+//            download_progress_bar.isVisible = dummy.isDownloading
+//            download_progress_bar.isVisible = dummy.isDownloading
             setOnClickListener {
                 listener(dummy)
             }
@@ -34,9 +33,9 @@ class YTDownloadAdapter2(var dummyes: ArrayList<DownloadedData>, val listener: (
         if (payloads.firstOrNull() != null) {
             with(holder.itemView) {
                 (payloads.first() as Bundle).getInt("progress").also {
-                    download_progress_bar.progress = it
-                    percent.isVisible = it < 99
-                    percent.text = "$it %"
+//                    download_progress_bar.progress = it
+//                    percent.isVisible = it < 99
+//                    percent.text = "$it %"
                 }
             }
         }

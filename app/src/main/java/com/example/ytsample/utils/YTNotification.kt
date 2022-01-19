@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.example.ytsample.MainActivity
+import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.R
 
 open class YTNotification(private val ctx: Context) {

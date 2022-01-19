@@ -10,6 +10,7 @@
         android:name="com.example.ytsample.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home">
+        p
         <action
             android:id="@+id/action_navigation_home_to_ytBottomSheetFragment"
             app:destination="@id/ytBottomSheetFragment">
@@ -17,6 +18,10 @@
                 android:name="url"
                 app:argType="string"
                 app:nullable="true" />
+            <argument
+                android:name="isFromSend"
+                app:argType="boolean"
+                app:nullable="false" />
         </action>
     </fragment>
     <fragment
@@ -38,6 +43,10 @@
             android:name="url"
             app:argType="string"
             app:nullable="true" />
+        <argument
+            android:name="isFromSend"
+            app:argType="boolean"
+            app:nullable="false" />
         <action
             android:id="@+id/action_ytBottomSheetFragment_to_navigation_download"
             app:destination="@id/navigation_download">

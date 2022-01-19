@@ -11,6 +11,6 @@
     <string name="generating_downloading_links">Generating downloading links</string>
     <string name="audio_download_links">AUDIO DOWNLOAD LINKS</string>
     <string name="video_download_links">VIDEO DOWNLOAD Links</string>
-    <string name="no_data">Could not find the videos</string>
+    <string name="no_data">Could not find any links</string>
     <string name="search">Search</string>
 </resources>

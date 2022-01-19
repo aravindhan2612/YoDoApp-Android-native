@@ -1,22 +1,30 @@
 package com.example.ytsample.adapter
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
+import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.R
 import com.example.ytsample.databinding.YtDownloadItemBinding
 import com.example.ytsample.entities.YTDownloadData
 import com.example.ytsample.ui.downloads.DownloadsFragment
 import com.example.ytsample.utils.Constants
 import com.example.ytsample.utils.MainViewModel
-import kotlinx.coroutines.launch
+import com.example.ytsample.utils.YTNotification
 import java.io.File
 
 class YTDownloadAdapter(
@@ -41,34 +49,91 @@ class YTDownloadAdapter(
     override fun onBindViewHolder(holder: Holder, position: Int) {
         mainViewModel?.getDownloadDataById()
         val item = list?.get(position)
-        if (item != null && (item.state != WorkInfo.State.CANCELLED)) {
-            if (item.state == WorkInfo.State.RUNNING) {
+        println("***** item state " + item?.state)
+        var currentYTDownloadData: YTDownloadData? = null
+        mainViewModel?.ytDownloadLiveDataList?.observe(
+            downloadsFragment,
+            Observer { list ->
+                if (list != null)
+                    currentYTDownloadData =
+                        list?.filter { it.id == item?.id.toString() }?.single()
+            })
+        when {
+            item?.state == WorkInfo.State.ENQUEUED -> {
+                holder.binding.downloadProgressBar.visibility = View.VISIBLE
+                holder.binding.downloadProgressBar.isIndeterminate = true
+            }
+            item?.state == WorkInfo.State.RUNNING -> {
                 val progress = item.progress.getInt(Constants.PROGRESS, 0)
+                holder.binding.downloadProgressBar.isIndeterminate = false
                 holder.binding.downloadProgressBar.setProgressCompat(progress, true)
                 holder.binding.percent.text = "$progress%"
-                mainViewModel?.ytDownloadLiveDataList?.observe(
-                    downloadsFragment,
-                    Observer { list ->
-                        if (list != null)
-                            holder.binding.titleTv.text =
-                                list?.filter { it.id == item?.id.toString() }?.single()?.title
-                    })
+                holder.binding.titleTv.text = currentYTDownloadData?.title
 
             }
-            if (item.state.isFinished) {
+            item?.state == WorkInfo.State.SUCCEEDED -> {
                 holder.binding.downloadProgressBar.visibility = View.GONE
                 holder.binding.titleTv.visibility = View.GONE
                 holder.binding.percent.visibility = View.GONE
                 holder.binding.cardView.visibility = View.GONE
-                mainViewModel?.workManager?.cancelUniqueWork(item.id.toString())
-                mainViewModel?.update(item.id.toString(), true)
+                if (currentYTDownloadData?.isFileDownload == false) {
+                    mainViewModel?.workManager?.cancelWorkById(item.id)
+                    mainViewModel?.update(item.id.toString(), true)
+                   // downloadFinished(currentYTDownloadData?.title)
+                }
             }
-        } else {
-            holder.binding.downloadProgressBar.visibility = View.GONE
-            holder.binding.titleTv.visibility = View.GONE
-            holder.binding.percent.visibility = View.GONE
-            holder.binding.cardView.visibility = View.GONE
+            else -> {
+                holder.binding.downloadProgressBar.visibility = View.GONE
+                holder.binding.titleTv.visibility = View.GONE
+                holder.binding.percent.visibility = View.GONE
+                holder.binding.cardView.visibility = View.GONE
+            }
         }
+    }
+
+    private fun downloadFinished(downloadTitle: String?) {
+        val id = System.currentTimeMillis().toInt()
+        var notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = context.applicationContext.getString(R.string.channel_name)
+            val descriptionText = context.applicationContext.getString(R.string.channel_description)
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel =
+                NotificationChannel(YTNotification.CHANNEL_ID, name, importance).apply {
+                    description = descriptionText
+                }
+            // Register the channel with the system
+
+            notificationManager.createNotificationChannel(channel)
+        }
+        val builder = NotificationCompat.Builder(
+            context.applicationContext,
+            YTNotification.CHANNEL_ID
+        )
+        val intent = Intent(context.applicationContext, MainActivity::class.java).apply {
+            this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            this.putExtra("data", "fromoutside")
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context.applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification =
+            builder.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
+                .setContentTitle(downloadTitle)
+                .setContentText("Download completed")
+                .setContentIntent(pendingIntent)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
+        notificationManager?.notify(id, notification)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createChannel() {
+        YTNotification(context).createNotificationChannel()
     }
 
     override fun getItemCount(): Int {
@@ -105,7 +170,6 @@ class YTDownloadAdapter(
                             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                             it.fileName
                         )
-                        println("***** external file " + file)
                         if (file?.exists()) {
                             file.delete()
                             mainViewModel?.deleteData(item?.id.toString())

@@ -1,7 +1,11 @@
 package com.example.ytsample.wm
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -12,6 +16,8 @@ import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.utils.YTNotification
 import com.google.gson.Gson
 import androidx.work.*
+import com.example.ytsample.R
+import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.network.RetrofitInterface
 import kotlinx.coroutines.*
 import java.io.*
@@ -53,12 +59,13 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
      */
 
     override suspend fun doWork(): ListenableWorker.Result {
+        val downloadedData: DownloadedData =
+            Gson().fromJson(
+                inputData.getString("downloadedData"),
+                DownloadedData::class.java
+            )
         withContext(Dispatchers.IO) {
-            val downloadedData: DownloadedData =
-                Gson().fromJson(
-                    inputData.getString("downloadedData"),
-                    DownloadedData::class.java
-                )
+
 
             val notifyId: Int = System.currentTimeMillis().toInt()
             val retrofit = Retrofit.Builder()
@@ -80,6 +87,7 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
             }
 
         }
+        downloadFinished(downloadedData.downloadTitle)
         return Result.success()
     }
 
@@ -171,27 +179,49 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
         return ForegroundInfo(id, notification!!)
     }
 
-    private fun downloadFinished(downloadTitle: String, id: Int): ForegroundInfo {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createChannel()
-        }
-        val builder = YTNotification(applicationContext).getNotificationBuilder()
-        val pendingIntent = YTNotification(applicationContext).getPendingIntent()
-        val notification =
-            builder?.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
-                ?.setContentTitle(downloadTitle)
-                ?.setContentIntent(pendingIntent)
-                ?.setProgress(0, 0, false)
-                ?.setOnlyAlertOnce(true)
-                ?.setAutoCancel(false)
-                ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
-
-        return ForegroundInfo(id, notification!!)
-
-    }
-
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createChannel() {
         YTNotification(applicationContext).createNotificationChannel()
+    }
+
+
+    private fun downloadFinished(downloadTitle: String?) {
+        val id = System.currentTimeMillis().toInt()
+        var notificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = applicationContext.applicationContext.getString(R.string.channel_name)
+            val descriptionText = applicationContext.applicationContext.getString(R.string.channel_description)
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel =
+                NotificationChannel(YTNotification.CHANNEL_ID, name, importance).apply {
+                    description = descriptionText
+                }
+            // Register the channel with the system
+
+            notificationManager.createNotificationChannel(channel)
+        }
+        val builder = NotificationCompat.Builder(
+            applicationContext.applicationContext,
+            YTNotification.CHANNEL_ID
+        )
+        val intent = Intent(applicationContext.applicationContext, MainActivity::class.java).apply {
+            this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            this.putExtra("data", "fromoutside")
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext.applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification =
+            builder.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
+                .setContentTitle(downloadTitle)
+                .setContentText("Download completed")
+                .setContentIntent(pendingIntent)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
+        notificationManager?.notify(id, notification)
     }
 }

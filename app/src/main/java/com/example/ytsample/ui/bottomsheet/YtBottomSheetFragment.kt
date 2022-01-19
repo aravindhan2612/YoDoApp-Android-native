@@ -11,7 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.ytsample.MainActivity
+import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.R
 import com.example.ytsample.databinding.YtBottomSheetFragmentBinding
 import com.example.ytsample.entities.DownloadedData
@@ -101,11 +101,16 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
 
     private fun initAllData() {
         binding.progressCircular.visibility = View.VISIBLE
-        viewModel.getRequest(
-            requireContext(),
-            args.url,
-            this
-        )
+        val urlLink = args.url
+        if (!urlLink.isNullOrEmpty()) {
+            viewModel.getRequest(
+                requireContext(),
+                args.url,
+                this
+            )
+        } else {
+            binding.titleTv.text = getString(R.string.no_data)
+        }
     }
 
     override fun onClick(v: View?) {
@@ -142,11 +147,13 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     fun downloadVideo(downloadedData: DownloadedData) {
         if (downloadedData.youtubeDlUrl != null) {
             mainActivityViewModel.downloadvideo(downloadedData)
-            val action =
-                YtBottomSheetFragmentDirections.actionYtBottomSheetFragmentToNavigationDownload(
-                    downloadedData
-                )
-            findNavController().navigate(action)
+            if (!args.isFromSend) {
+                val action =
+                    YtBottomSheetFragmentDirections.actionYtBottomSheetFragmentToNavigationDownload(
+                        downloadedData
+                    )
+                findNavController().navigate(action)
+            }
             dismiss()
         } else {
             view?.let {

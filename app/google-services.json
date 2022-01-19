@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "305063174245",
+    "project_id": "yodo-app-51608",
+    "storage_bucket": "yodo-app-51608.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:305063174245:android:8b61eb4d65b737bc7c268c",
+        "android_client_info": {
+          "package_name": "com.myyodo.yododownloader"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "305063174245-el910a9s7sfbbduhagqjitmed8h467d8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoNEFYfVw1K41m4tTtzMKYyVIIyHu-ApE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "305063174245-el910a9s7sfbbduhagqjitmed8h467d8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

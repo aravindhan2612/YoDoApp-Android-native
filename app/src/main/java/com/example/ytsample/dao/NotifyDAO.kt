@@ -21,6 +21,6 @@ interface NotifyDAO {
     @Query("DELETE FROM YTDownloadData WHERE id = :uid")
     suspend fun deleteById(uid: String)
 
-    @Query("UPDATE YTDownloadData SET isFileDownload =:isDownloaded  WHERE id = :uid")
-    suspend fun updateById(uid: String,isDownloaded:Boolean)
+    @Query("UPDATE YTDownloadData SET isFileDownload =:isDownloaded, isDownloadedSuccess =:isDownloadedSuccess   WHERE id = :uid")
+    suspend fun updateById(uid: String,isDownloaded:Boolean,isDownloadedSuccess: Boolean)
 }

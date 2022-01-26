@@ -13,12 +13,12 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.R
+import com.example.ytsample.callbacks.IAdapterCallback
 import com.example.ytsample.databinding.YtDownloadItemBinding
 import com.example.ytsample.entities.YTDownloadData
 import com.example.ytsample.ui.downloads.DownloadsFragment
@@ -29,8 +29,9 @@ import java.io.File
 
 class YTDownloadAdapter(
     var list: List<WorkInfo>?,
+    var dbList: ArrayList<YTDownloadData>?,
     var context: Context,
-    private val downloadsFragment: DownloadsFragment
+    private val downloadsFragment: DownloadsFragment,var adapterCallback: IAdapterCallback
 ) : RecyclerView.Adapter<YTDownloadAdapter.Holder>() {
 
     private lateinit var ytDownloadItemBinding: YtDownloadItemBinding
@@ -47,47 +48,51 @@ class YTDownloadAdapter(
     }
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
-        mainViewModel?.getDownloadDataById()
         val item = list?.get(position)
-        println("***** item state " + item?.state)
-        var currentYTDownloadData: YTDownloadData? = null
-        mainViewModel?.ytDownloadLiveDataList?.observe(
-            downloadsFragment,
-            Observer { list ->
-                if (list != null)
-                    currentYTDownloadData =
-                        list?.filter { it.id == item?.id.toString() }?.single()
-            })
-        when {
-            item?.state == WorkInfo.State.ENQUEUED -> {
-                holder.binding.downloadProgressBar.visibility = View.VISIBLE
-                holder.binding.downloadProgressBar.isIndeterminate = true
-            }
-            item?.state == WorkInfo.State.RUNNING -> {
-                val progress = item.progress.getInt(Constants.PROGRESS, 0)
-                holder.binding.downloadProgressBar.isIndeterminate = false
-                holder.binding.downloadProgressBar.setProgressCompat(progress, true)
-                holder.binding.percent.text = "$progress%"
-                holder.binding.titleTv.text = currentYTDownloadData?.title
+        val ytDownloadData = dbList?.find { it.id == item?.id.toString() }
+        if (ytDownloadData?.isFileDownload == false) {
+            when (item?.state) {
+                WorkInfo.State.RUNNING -> {
+                    val progress = item.progress.getInt(Constants.PROGRESS, 0)
+                    if (progress == 0) {
+                        holder.binding.loadingMessageLayout.visibility = View.VISIBLE
+                    } else {
+                        holder.binding.loadingMessageLayout.visibility = View.GONE
+                        holder.binding.downloadLayout.visibility = View.VISIBLE
+                        holder.binding.titleTv.visibility = View.VISIBLE
+                        holder.binding.downloadProgressBar.isIndeterminate = false
+                        holder.binding.downloadProgressBar.setProgressCompat(progress, true)
+                        holder.binding.percent.text = "$progress%"
+                        holder.binding.titleTv.text = ytDownloadData.title
+                    }
+                }
+                WorkInfo.State.SUCCEEDED -> {
+                    holder.binding.cardView.visibility = View.GONE
+                    if (!ytDownloadData.isFileDownload) {
+                        mainViewModel?.workManager?.cancelWorkById(item.id)
+                        mainViewModel?.update(item.id.toString(), true,true)
+                        // downloadFinished(currentYTDownloadData?.title)
+                    }
+                }
+                WorkInfo.State.CANCELLED -> {
+                    holder.binding.cardView.visibility = View.GONE
+                    if (!ytDownloadData.isFileDownload) {
+                        mainViewModel?.update(item.id.toString(), true,false)
+                    }
 
-            }
-            item?.state == WorkInfo.State.SUCCEEDED -> {
-                holder.binding.downloadProgressBar.visibility = View.GONE
-                holder.binding.titleTv.visibility = View.GONE
-                holder.binding.percent.visibility = View.GONE
-                holder.binding.cardView.visibility = View.GONE
-                if (currentYTDownloadData?.isFileDownload == false) {
-                    mainViewModel?.workManager?.cancelWorkById(item.id)
-                    mainViewModel?.update(item.id.toString(), true)
-                   // downloadFinished(currentYTDownloadData?.title)
+                }
+                WorkInfo.State.FAILED ->{
+                    holder.binding.cardView.visibility = View.GONE
+                    if (!ytDownloadData.isFileDownload) {
+                        mainViewModel?.update(item.id.toString(), true,false)
+                    }
+                }
+                else -> {
+                    holder.binding.cardView.visibility = View.GONE
                 }
             }
-            else -> {
-                holder.binding.downloadProgressBar.visibility = View.GONE
-                holder.binding.titleTv.visibility = View.GONE
-                holder.binding.percent.visibility = View.GONE
-                holder.binding.cardView.visibility = View.GONE
-            }
+        } else {
+            holder.binding.cardView.visibility = View.GONE
         }
     }
 
@@ -140,8 +145,13 @@ class YTDownloadAdapter(
         return list?.size ?: 0
     }
 
-    fun refreshList(newList: ArrayList<WorkInfo>) {
+    fun refreshList(newList: ArrayList<WorkInfo>?) {
         list = newList
+        notifyDataSetChanged()
+    }
+
+    fun refreshDBList(newDbList: ArrayList<YTDownloadData>?) {
+        dbList = newDbList
         notifyDataSetChanged()
     }
 
@@ -158,31 +168,8 @@ class YTDownloadAdapter(
             when (v?.id) {
                 R.id.cancel_button -> {
                     val item = list?.get(adapterPosition)
-                    var element: YTDownloadData? = null
-                    mainViewModel?.workManager?.cancelUniqueWork(item?.id.toString())
-                    mainViewModel?.ytDownloadLiveDataList?.observe(
-                        downloadsFragment,
-                        Observer { list ->
-                            element = list?.filter { it.id == item?.id.toString() }?.single()
-                        })
-                    element?.let {
-                        val file = File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                            it.fileName
-                        )
-                        if (file?.exists()) {
-                            file.delete()
-                            mainViewModel?.deleteData(item?.id.toString())
-                            Toast.makeText(context, "Deleted ${it.title}", Toast.LENGTH_LONG)
-                                .show()
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Error on deleting file from device ${it.title}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
+                    val element: YTDownloadData? = dbList?.find { it.id == item?.id.toString() }
+                    adapterCallback.onItemSelected(element,false)
                 }
             }
         }

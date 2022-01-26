@@ -19,7 +19,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val workManager = WorkManager.getInstance(application)
     internal val outputWorkInfos: LiveData<List<WorkInfo>>
     internal val progressWorkInfoItems: LiveData<List<WorkInfo>>
-    val ytDownloadLiveDataList = MutableLiveData<List<YTDownloadData>>()
+    val ytDownloadLiveDataList = MutableLiveData<List<YTDownloadData>?>()
     val yoDoRespository: YoDoRespository
     val yodoDB: YoDoDatabase
 
@@ -42,7 +42,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val task = OneTimeWorkRequest.Builder(DownLoadFileWorkManager::class.java)
             .setInputData(createInputDataForUri(downloadedData))
             .addTag(TAG_PROGRESS)
-            .setConstraints(constraints).build()
+            .setConstraints(constraints)
+            .build()
         workManager.beginUniqueWork(task.id.toString(), ExistingWorkPolicy.APPEND_OR_REPLACE, task)
             .enqueue()
         val data = YTDownloadData(
@@ -55,11 +56,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         insertData(data)
     }
 
-    fun getDownloadDataById() {
+    fun getAllDownloadData() {
         viewModelScope.launch {
             yoDoRespository.allData.collect {
                 if (it.isNotEmpty())
-                    ytDownloadLiveDataList.value = it
+                   ytDownloadLiveDataList.value = it
             }
         }
     }
@@ -76,9 +77,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun update(id: String, isDownload: Boolean) {
+    fun update(id: String, isDownload: Boolean,isDownloadSuccess: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            yoDoRespository.update(id, isDownload)
+            yoDoRespository.update(id, isDownload,isDownloadSuccess)
         }
     }
 

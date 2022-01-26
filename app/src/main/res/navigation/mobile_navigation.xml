@@ -10,7 +10,6 @@
         android:name="com.example.ytsample.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home">
-        p
         <action
             android:id="@+id/action_navigation_home_to_ytBottomSheetFragment"
             app:destination="@id/ytBottomSheetFragment">

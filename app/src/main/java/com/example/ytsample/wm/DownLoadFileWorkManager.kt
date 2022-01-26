@@ -24,6 +24,7 @@ import java.io.*
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import com.example.ytsample.entities.Download
+import com.example.ytsample.entities.ProgressState
 import com.example.ytsample.ui.home.LiveDataHelper
 import com.example.ytsample.utils.Constants
 import kotlinx.io.errors.IOException
@@ -131,6 +132,7 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
         var total: Long = 0
         val startTime = System.currentTimeMillis()
         var timeCount = 1
+        setProgressAsync(workDataOf(Constants.TITLE to downloadedData.downloadTitle))
         while (bis.read(data).also { count = it } != -1) {
             total += count.toLong()
             totalFileSize = (fileSize / Math.pow(1024.0, 2.0)).toInt()

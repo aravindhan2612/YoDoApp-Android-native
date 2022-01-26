@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.ytsample.dao.NotifyDAO
 import com.example.ytsample.entities.YTDownloadData
 
-@Database(entities = [YTDownloadData::class], version = 1)
+@Database(entities = [YTDownloadData::class], version = 2)
 public abstract class YoDoDatabase : RoomDatabase() {
     abstract fun notifyDAO(): NotifyDAO
 

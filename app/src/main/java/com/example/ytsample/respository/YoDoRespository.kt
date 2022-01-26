@@ -20,8 +20,8 @@ class YoDoRespository(private val notifyDAO: NotifyDAO) {
         notifyDAO.insert(data)
     }
     @WorkerThread
-    suspend fun update(id: String,isDownload:Boolean) {
-        notifyDAO.updateById(id,isDownload)
+    suspend fun update(id: String,isFileDownloaded:Boolean,isDownloadSuccess:Boolean) {
+        notifyDAO.updateById(id,isFileDownloaded,isDownloadSuccess)
     }
 
     @Suppress("RedundantSuspendModifier")

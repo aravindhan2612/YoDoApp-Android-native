@@ -13,4 +13,8 @@
     <string name="video_download_links">VIDEO DOWNLOAD Links</string>
     <string name="no_data">Could not find any links</string>
     <string name="search">Search</string>
+    <string name="downloaded">Downloaded Files</string>
+    <string name="downloaded_successfully">"File downloaded successfully"</string>
+    <string name="download_failed">" Download failed.Delete the file and try again"</string>
+    <string name="downloaded_start_message">Downloaded will start soon</string>
 </resources>

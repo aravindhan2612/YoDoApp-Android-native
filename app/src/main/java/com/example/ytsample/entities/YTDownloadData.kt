@@ -10,7 +10,8 @@ class YTDownloadData(
     @ColumnInfo(name = "title") var title: String?,
     @ColumnInfo(name = "id") var id: String,
     @ColumnInfo(name = "isFileDownload") var isFileDownload: Boolean,
-    @ColumnInfo(name = "fileName") var fileName: String?
+    @ColumnInfo(name = "fileName") var fileName: String?,
+    @ColumnInfo(name = "isDownloadedSuccess") var isDownloadedSuccess: Boolean = false
 ) {
 
 }

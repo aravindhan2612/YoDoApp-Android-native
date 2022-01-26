@@ -236,10 +236,6 @@ class YtBottomSheetViewModel : ViewModel() {
                 }
                 decipherJsFileName = curJsFileName
             }
-//            if (LOGGING) Log.d(
-//                "*****",
-//                "Decipher signatures: " + encSignatures.size() + ", videos: " + ytFiles.size()
-//            )
             val signature: String?
             decipheredSignature = null
             if (decipherSignature(encSignatures, context)) {
@@ -262,11 +258,9 @@ class YtBottomSheetViewModel : ViewModel() {
                             if (value.adaptive?.url != null) {
                                 value.adaptive?.url += "&sig=" + sigs[i]
                                 formatModelList[index].adaptive = value.adaptive
-                                println("****** url sig formats " + value.adaptive?.url)
                             } else if (value.format?.url != null) {
                                 value.format?.url += "&sig=" + sigs[i]
                                 formatModelList[index].format = value.format
-                                println("****** url sig formats " + value.format?.url)
                             }
                         }
                     }
@@ -314,10 +308,6 @@ class YtBottomSheetViewModel : ViewModel() {
             val javascriptFile: String
             val url = URL(decipherFunctUrl)
             val urlConnection = url.openConnection() as HttpURLConnection
-//            urlConnection.setRequestProperty(
-//                "User-Agent",
-//                YouTubeUtils.USER_AGENT
-//            )
             try {
                 reader = BufferedReader(InputStreamReader(urlConnection.inputStream))
                 val sb = StringBuilder()

@@ -1,8 +1,6 @@
 package com.example.ytsample.ui.downloads
 
-import android.app.DownloadManager
 import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
 import android.os.Environment
@@ -10,28 +8,35 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.core.util.forEach
+import android.widget.Toast
 import androidx.lifecycle.Observer
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.navigation.fragment.navArgs
+import androidx.work.WorkInfo
+import com.example.ytsample.adapter.DownloadedFilesAdapter
+import com.example.ytsample.controllers.MainActivity
+import com.example.ytsample.adapter.YTDownloadAdapter
+import com.example.ytsample.callbacks.IAdapterCallback
 import com.example.ytsample.databinding.DownloadsFragmentBinding
-import com.example.ytsample.entities.VideoMeta
-import com.example.ytsample.entities.YtFile
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.example.ytsample.entities.DownloadedData
+import com.example.ytsample.entities.YTDownloadData
+import com.example.ytsample.utils.MainViewModel
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.android.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import java.io.File
 
-class DownloadsFragment : Fragment() {
-
+class DownloadsFragment : Fragment(),IAdapterCallback {
 
     private lateinit var viewModel: DownloadsViewModel
-
     private lateinit var _binding: DownloadsFragmentBinding
-
-    private var adapter: YTAdapter? = null
+    private lateinit var mainActivity: MainActivity
+    val args: DownloadsFragmentArgs by navArgs()
+    private var data = ArrayList<DownloadedData>()
+    private var adapter: YTDownloadAdapter? = null
+    private lateinit var mainActivityViewModel: MainViewModel
+    private var downloadedFilesAdapter: DownloadedFilesAdapter? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,79 +49,85 @@ class DownloadsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProvider(this).get(DownloadsViewModel::class.java)
-        viewModel.responseResult.observe(viewLifecycleOwner, Observer { result ->
-            result?.let {
-                viewModel.extractUrl(it, requireContext())
+        mainActivityViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
+        mainActivityViewModel.getAllDownloadData()
+        initAdapter(null, null)
+        initDownloadedAdapter()
+        mainActivityViewModel.progressWorkInfoItems.observe(viewLifecycleOwner, progressObserver())
+        mainActivityViewModel.ytDownloadLiveDataList.observe(
+            viewLifecycleOwner,
+            Observer { list ->
+                    _binding.downloadedRecyclerView.visibility = if (list.isNullOrEmpty())View.GONE  else View.VISIBLE
+                    adapter?.refreshDBList(list as ArrayList<YTDownloadData>?)
+                    downloadedFilesAdapter?.refreshDBList(list as ArrayList<YTDownloadData>?)
+                    val isDownload = list?.any { it.isFileDownload }
+                    _binding.textDownload.visibility = if (isDownload == true) View.GONE else View.VISIBLE
+            })
+    }
+
+    private fun initDownloadedAdapter() {
+        if (downloadedFilesAdapter == null) {
+            downloadedFilesAdapter = context?.let { DownloadedFilesAdapter(null, it, this,this) }
+            downloadedFilesAdapter?.let {
+                _binding.downloadedRecyclerView.adapter = it
             }
-        })
-        viewModel.text.observe(viewLifecycleOwner, Observer {
-            _binding.progressHorizontal.visibility = View.GONE
-            val ytlist = ArrayList<YtFile>()
-            it?.let { ytMetaData ->
-                ytMetaData.list.forEach { key, value ->
-                    ytlist.add(value)
-                }
-                initAdapter(ytlist, ytMetaData.meta)
+        }
+    }
+
+    private fun initAdapter(list: List<WorkInfo>?, dbList: ArrayList<YTDownloadData>?) {
+        if (adapter == null) {
+            adapter = context?.let { YTDownloadAdapter(list, dbList, it, this,this) }
+            adapter?.let {
+                _binding.recyclerView.adapter = it
             }
-        })
-        _binding.progressHorizontal.visibility = View.VISIBLE
-        viewModel.getRequest(requireContext(), "https://youtu.be/8F2s8ivKXNY", this)
-    }
-
-    fun initAdapter(list: ArrayList<YtFile>, meta: VideoMeta?) {
-        _binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        adapter = YTAdapter(list, meta, requireContext(), this)
-        _binding.recyclerView.adapter = adapter
-    }
-
-    private fun loadWebView(s: String) {
-        _binding.webviewDownload.webViewClient = webClient
-        _binding.webviewDownload.webChromeClient = chromeClient
-        _binding.webviewDownload.settings.loadWithOverviewMode = true
-        _binding.webviewDownload.settings.setSupportZoom(true)
-        _binding.webviewDownload.settings.javaScriptEnabled = true
-        _binding.webviewDownload.loadUrl(s)
-
-    }
-
-    private val chromeClient = object : WebChromeClient() {
-        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-            super.onProgressChanged(view, newProgress)
-            _binding.progressHorizontal.visibility = View.VISIBLE
-            _binding.progressHorizontal.progress = newProgress
         }
     }
 
-
-    private val webClient = object : WebViewClient() {
-        override fun shouldOverrideUrlLoading(
-            view: WebView?,
-            request: WebResourceRequest?
-        ): Boolean {
-            view?.loadUrl(request?.url.toString())
-            return true
-        }
-
-        override fun onPageFinished(view: WebView?, url: String?) {
-            super.onPageFinished(view, url)
-            _binding.progressHorizontal.visibility = View.GONE
-        }
-
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        mainActivity = context as MainActivity
     }
 
-    fun downloadVideo(youtubeDlUrl: String?, downloadTitle: String?, fileName: String?) {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val uri = Uri.parse(youtubeDlUrl)
-            val request = DownloadManager.Request(uri)
-            request.setTitle(downloadTitle)
+    private fun progressObserver(): Observer<List<WorkInfo>> {
+        return Observer { listOfWorkInfo ->
+            if (listOfWorkInfo.isNullOrEmpty()) {
+                _binding.recyclerView.visibility = View.GONE
+                return@Observer
+            }
+            listOfWorkInfo?.let {
+                _binding.recyclerView.visibility = View.VISIBLE
+                _binding.recyclerView.adapter = adapter
+                adapter?.refreshList(it as ArrayList<WorkInfo>)
+            }
 
-            request.allowScanningByMediaScanner()
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-
-            val manager = requireActivity().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            manager.enqueue(request)
         }
     }
 
+    override fun onItemSelected(type: Any?,isDelete :Boolean) {
+        type?.let {
+            if (it is YTDownloadData) {
+                mainActivityViewModel.workManager.cancelUniqueWork(it.id)
+                    val file = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                        it.fileName
+                    )
+                    if (file?.exists()) {
+                        file.delete()
+                        Toast.makeText(context, "Deleted ${it.title}", Toast.LENGTH_LONG)
+                            .show()
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Error on deleting file from device ${it.title}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    if (isDelete) {
+                        mainActivityViewModel.deleteData(it.id)
+                    }
+
+            }
+        }
+
+    }
 }

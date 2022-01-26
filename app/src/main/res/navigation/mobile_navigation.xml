@@ -9,22 +9,50 @@
         android:id="@+id/navigation_home"
         android:name="com.example.ytsample.ui.home.HomeFragment"
         android:label="@string/title_home"
-        tools:layout="@layout/fragment_home" />
-
-    <fragment
-        android:id="@+id/navigation_dashboard"
-        android:name="com.example.ytsample.ui.dashboard.DashboardFragment"
-        android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
-
-    <fragment
-        android:id="@+id/navigation_notifications"
-        android:name="com.example.ytsample.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_navigation_home_to_ytBottomSheetFragment"
+            app:destination="@id/ytBottomSheetFragment">
+            <argument
+                android:name="url"
+                app:argType="string"
+                app:nullable="true" />
+            <argument
+                android:name="isFromSend"
+                app:argType="boolean"
+                app:nullable="false" />
+        </action>
+    </fragment>
     <fragment
         android:id="@+id/navigation_download"
         android:name="com.example.ytsample.ui.downloads.DownloadsFragment"
         android:label="@string/title_downloads"
-        tools:layout="@layout/downloads_fragment"/>
+        tools:layout="@layout/downloads_fragment">
+        <argument
+            android:name="downloadData"
+            app:argType="com.example.ytsample.entities.DownloadedData"
+            app:nullable="true" />
+    </fragment>
+    <dialog
+        android:id="@+id/ytBottomSheetFragment"
+        android:name="com.example.ytsample.ui.bottomsheet.YtBottomSheetFragment"
+        android:label="yt_bottom_sheet_fragment"
+        tools:layout="@layout/yt_bottom_sheet_fragment">
+        <argument
+            android:name="url"
+            app:argType="string"
+            app:nullable="true" />
+        <argument
+            android:name="isFromSend"
+            app:argType="boolean"
+            app:nullable="false" />
+        <action
+            android:id="@+id/action_ytBottomSheetFragment_to_navigation_download"
+            app:destination="@id/navigation_download">
+            <argument
+                android:name="downloadData"
+                app:argType="com.example.ytsample.entities.DownloadedData"
+                app:nullable="true" />
+        </action>
+    </dialog>
 </navigation>

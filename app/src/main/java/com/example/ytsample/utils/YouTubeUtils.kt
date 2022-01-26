@@ -1,15 +1,17 @@
 package com.example.ytsample.utils
 
+import android.os.Build
 import android.util.SparseArray
 import com.example.ytsample.entities.Format
+import org.json.JSONObject
 import java.util.regex.Pattern
 
 class YouTubeUtils {
 
     companion object {
          var FORMAT_MAP: SparseArray<Format> = SparseArray<Format>()
-        const val USER_AGENT =
-            "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36"
+         val USER_AGENT =
+            "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; ${Build.MANUFACTURER} ${Build.MODEL}) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
         @JvmStatic
         val patYouTubePageLink =
             Pattern.compile("(http|https)://(www\\.|m.|)youtube\\.com/watch\\?v=(.+?)( |\\z|&)")
@@ -42,6 +44,7 @@ class YouTubeUtils {
         @JvmStatic
         val patFunction: Pattern =
             Pattern.compile("([{; =])([a-zA-Z$\\_][a-zA-Z0-9$]{0,2})\\(")
+
     }
 
 }

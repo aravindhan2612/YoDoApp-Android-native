@@ -1,7 +1,20 @@
 <resources>
-    <string name="app_name">YTSample</string>
+    <string name="app_name">YoDo</string>
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
     <string name="title_downloads">Downloads</string>
+    <string name="paste_the_youtube_url_here">Paste the youtube url here</string>
+    <string name="no_downloads">No downloads</string>
+    <string name="channel_name">YTChannel</string>
+    <string name="channel_description">Downlaod progress</string>
+    <string name="generating_downloading_links">Generating downloading links</string>
+    <string name="audio_download_links">AUDIO DOWNLOAD LINKS</string>
+    <string name="video_download_links">VIDEO DOWNLOAD Links</string>
+    <string name="no_data">Could not find any links</string>
+    <string name="search">Search</string>
+    <string name="downloaded">Downloaded Files</string>
+    <string name="downloaded_successfully">"File downloaded successfully"</string>
+    <string name="download_failed">" Download failed.Delete the file and try again"</string>
+    <string name="downloaded_start_message">Downloaded will start soon</string>
 </resources>

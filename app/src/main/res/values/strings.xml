@@ -16,5 +16,5 @@
     <string name="downloaded">Downloaded Files</string>
     <string name="downloaded_successfully">"File downloaded successfully"</string>
     <string name="download_failed">" Download failed.Delete the file and try again"</string>
-    <string name="downloaded_start_message">Downloaded will start soon</string>
+    <string name="downloaded_start_message">Downloading will start soon...</string>
 </resources>

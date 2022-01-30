@@ -4,12 +4,12 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.ytsample.dao.NotifyDAO
-import com.example.ytsample.entities.YTDownloadData
+import com.example.ytsample.dao.DownloadedFileDAO
+import com.example.ytsample.entities.dbentities.DownloadedFile
 
-@Database(entities = [YTDownloadData::class], version = 2)
+@Database(entities = [DownloadedFile::class], version = 2)
 public abstract class YoDoDatabase : RoomDatabase() {
-    abstract fun notifyDAO(): NotifyDAO
+    abstract fun downloadedFileDAO() : DownloadedFileDAO
 
     companion object {
         @Volatile

@@ -11,5 +11,6 @@ class Constants {
         const val TAG_PROGRESS = "TAG_PROGRESS"
         const val DOWNLOAD_VIDEO = "DOWNLOAD_VIDEO"
 
+        const val  YT_BOTTOM_SHEET_FRAGMENT_TAG = "yt_bottom_sheet_fragment"
     }
 }

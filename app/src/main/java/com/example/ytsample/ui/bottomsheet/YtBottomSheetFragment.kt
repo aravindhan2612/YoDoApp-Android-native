@@ -2,6 +2,7 @@ package com.example.ytsample.ui.bottomsheet
 
 
 import android.content.Context
+import android.net.wifi.hotspot2.pps.HomeSp
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,6 +23,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.snackbar.Snackbar
 
 import androidx.recyclerview.widget.DividerItemDecoration
+import com.example.ytsample.callbacks.IDialogListener
+import com.example.ytsample.ui.home.HomeFragment
 import com.example.ytsample.utils.MainViewModel
 
 
@@ -31,10 +34,20 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     private lateinit var viewModel: YtBottomSheetViewModel
     private lateinit var mainActivityViewModel: MainViewModel
     private lateinit var binding: YtBottomSheetFragmentBinding
-    val args: YtBottomSheetFragmentArgs by navArgs()
     private lateinit var mainActivity: MainActivity
     private var videoAdapter: YTAdapter? = null
     private var audioAdapter: YTAdapter? = null
+    private var dialogListener:IDialogListener? = null
+
+    companion object{
+        fun newInstance( url : String?): YtBottomSheetFragment {
+            val args = Bundle()
+            args.putString("URL",url)
+            val fragment =YtBottomSheetFragment ()
+            fragment.arguments = args
+            return fragment
+        }
+    }
 
 
     override fun onCreateView(
@@ -60,6 +73,9 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
         viewModel = ViewModelProvider(this).get(YtBottomSheetViewModel::class.java)
         mainActivityViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         binding.closeBtn.setOnClickListener(this)
+        if (viewModel.getUrl() == null){
+            viewModel.setUrl(arguments?.getString("URL"))
+        }
         initObserver()
         initAllData()
     }
@@ -100,12 +116,17 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
     }
 
     private fun initAllData() {
+        if (dialogListener == null){
+            if (parentFragment is HomeFragment) {
+                dialogListener = parentFragment as HomeFragment
+            }
+        }
         binding.progressCircular.visibility = View.VISIBLE
-        val urlLink = args.url
+        val urlLink = viewModel.getUrl()
         if (!urlLink.isNullOrEmpty()) {
             viewModel.getRequest(
                 requireContext(),
-                args.url,
+               urlLink,
                 this
             )
         } else {
@@ -144,23 +165,13 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
         }
     }
 
-    fun downloadVideo(downloadedData: DownloadedData) {
-        if (downloadedData.youtubeDlUrl != null) {
-            mainActivityViewModel.downloadvideo(downloadedData)
-            if (!args.isFromSend) {
-                val action =
-                    YtBottomSheetFragmentDirections.actionYtBottomSheetFragmentToNavigationDownload(
-                        downloadedData
-                    )
-                findNavController().navigate(action)
-            }
-            dismiss()
-        } else {
-            view?.let {
-                Snackbar.make(it, "Unable to download video ", Snackbar.LENGTH_SHORT).show()
-            }
-            dismiss()
-        }
+    fun setDialogListener(dialogListener:IDialogListener){
+        this.dialogListener = dialogListener
+    }
+
+    fun downloadVideo(downloadedData: DownloadedData?){
+        dialogListener?.onDialogResult(downloadedData)
+        dismiss()
     }
 
 }

@@ -24,7 +24,6 @@ import java.io.*
 import okhttp3.ResponseBody
 import retrofit2.Retrofit
 import com.example.ytsample.entities.Download
-import com.example.ytsample.entities.ProgressState
 import com.example.ytsample.ui.home.LiveDataHelper
 import com.example.ytsample.utils.Constants
 import kotlinx.io.errors.IOException
@@ -66,8 +65,6 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
                 DownloadedData::class.java
             )
         withContext(Dispatchers.IO) {
-
-
             val notifyId: Int = System.currentTimeMillis().toInt()
             val retrofit = Retrofit.Builder()
                 .baseUrl("http://localhost/")
@@ -79,11 +76,22 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
                 )
             }
             try {
-                request?.execute()?.body()?.let { downloadFile(it,downloadedData,notifyId) }
-            }catch (e:IOException) {
+                val output: OutputStream? = createFileOutPutStream(downloadedData)
+                val download = Download()
+                download.downloadTitle = downloadedData.downloadTitle
+                download.id = id.toString()
+                download.fileName = downloadedData.fileName
+                LiveDataHelper.instance?.downloadDatas?.set(id.toString(), download)
+                LiveDataHelper.instance?.updatePercentage( LiveDataHelper.instance?.downloadDatas)
+                request?.execute()?.body()?.let { downloadFile(it, downloadedData, notifyId,download,output) }
+            } catch (e: IOException) {
 
                 e.printStackTrace();
-                Toast.makeText(applicationContext," Error on downloading  link",Toast.LENGTH_SHORT).show();
+                Toast.makeText(
+                    applicationContext,
+                    " Error on downloading  link",
+                    Toast.LENGTH_SHORT
+                ).show();
 
             }
 
@@ -96,55 +104,38 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
     private fun downloadFile(
         body: ResponseBody,
         downloadedData: DownloadedData,
-        notifyId: Int
+        notifyId: Int,
+        download: Download,
+        output: OutputStream?
     ) {
         var count: Int
         val data = ByteArray(1024 * 4)
         val fileSize = body.contentLength()
         val bis: InputStream = BufferedInputStream(body.byteStream(), 1024 * 8)
-        var output: OutputStream? = null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver =applicationContext.contentResolver
-            val values = ContentValues()
-            values.put(
-                MediaStore.MediaColumns.DISPLAY_NAME,
-                downloadedData.fileName
-            )
-            values.put(
-                MediaStore.MediaColumns.RELATIVE_PATH,
-                Environment.DIRECTORY_DOWNLOADS
-            )
-            val uri =
-                resolver.insert(MediaStore.Files.getContentUri("external"), values)
-
-            // Output stream to write file
-            output = uri?.let { resolver.openOutputStream(it) }
-        } else {
-            val file = File(
-                Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS
-                ),
-                downloadedData.fileName
-            )
-            // Output stream to write file
-            output = FileOutputStream(file, true)
-        }
         var total: Long = 0
         val startTime = System.currentTimeMillis()
         var timeCount = 1
         setProgressAsync(workDataOf(Constants.TITLE to downloadedData.downloadTitle))
-        while (bis.read(data).also { count = it } != -1) {
+        while (bis.read(data).also { count = it } != -1 && LiveDataHelper.instance?.downloadDatas?.get(this.id.toString()) != null) {
             total += count.toLong()
             totalFileSize = (fileSize / Math.pow(1024.0, 2.0)).toInt()
             val current = Math.round(total / Math.pow(1024.0, 2.0)).toDouble()
             val progress = (total * 100 / fileSize).toInt()
             val currentTime = System.currentTimeMillis() - startTime
-            val download = Download()
             download.totalFileSize = totalFileSize
             if (currentTime > 1000 * timeCount) {
                 download.currentFileSize = current.toInt()
                 download.progress = progress
-                setForegroundAsync(createForegroundInfo(downloadedData.downloadTitle,100,notifyId,download))
+                setForegroundAsync(
+                    createForegroundInfo(
+                        downloadedData.downloadTitle,
+                        100,
+                        notifyId,
+                        download
+                    )
+                )
+                LiveDataHelper.instance?.downloadDatas?.set(this.id.toString(), download)
+                LiveDataHelper.instance?.updatePercentage( LiveDataHelper.instance?.downloadDatas)
                 setProgressAsync(workDataOf(Constants.PROGRESS to download.progress))
                 timeCount++
             }
@@ -153,6 +144,34 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
         output?.flush()
         output?.close()
         bis.close()
+    }
+
+    private fun createFileOutPutStream(downloadedData: DownloadedData): OutputStream? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = applicationContext.contentResolver
+            val values = ContentValues()
+            values.put(
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                downloadedData.fileName
+            )
+            values.put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                Environment.DIRECTORY_DOWNLOADS +"/YoDoApp"
+            )
+            var uri =
+                resolver.insert(MediaStore.Files.getContentUri("external"), values)
+            // Output stream to write file
+           return uri?.let { resolver.openOutputStream(it) }
+        } else {
+             val file = File(
+                Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS +"/YoDoApp"
+                ),
+                 downloadedData.fileName
+            )
+            // Output stream to write file
+            return FileOutputStream(file, true)
+        }
     }
 
     private fun createForegroundInfo(
@@ -165,17 +184,18 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
         val builder = YTNotification(applicationContext).getNotificationBuilder()
         val pendingIntent = YTNotification(applicationContext).getPendingIntent()
         val notification =
-            builder?.setSmallIcon(com.example.ytsample.R.mipmap.ic_yo_do_launcher_icon)
+            builder?.setSmallIcon(com.example.ytsample.R.drawable.ic_baseline_ondemand_video_24)
                 ?.setContentTitle(downloadTitle)
                 ?.setContentText("${data?.progress}%")
                 ?.setContentIntent(pendingIntent)
-                ?.setProgress(max, data?.progress?:0, false)
+                ?.setProgress(max, data?.progress ?: 0, false)
                 ?.setOnlyAlertOnce(true)
                 ?.setAutoCancel(false)
                 ?.setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 ?.setCategory(NotificationCompat.CATEGORY_EVENT)
                 ?.setStyle(
-                    NotificationCompat.InboxStyle().addLine("${data?.currentFileSize} /${data?.totalFileSize} MB")
+                    NotificationCompat.InboxStyle()
+                        .addLine("${data?.currentFileSize} /${data?.totalFileSize} MB")
                 )
                 ?.build()
         return ForegroundInfo(id, notification!!)
@@ -193,7 +213,8 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = applicationContext.applicationContext.getString(R.string.channel_name)
-            val descriptionText = applicationContext.applicationContext.getString(R.string.channel_description)
+            val descriptionText =
+                applicationContext.applicationContext.getString(R.string.channel_description)
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel =
                 NotificationChannel(YTNotification.CHANNEL_ID, name, importance).apply {
@@ -218,7 +239,7 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
             PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notification =
-            builder.setSmallIcon(com.example.ytsample.R.drawable.ic_round_arrow_downward_24)
+            builder.setSmallIcon(com.example.ytsample.R.drawable.ic_baseline_ondemand_video_24)
                 .setContentTitle(downloadTitle)
                 .setContentText("Download completed")
                 .setContentIntent(pendingIntent)

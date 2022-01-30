@@ -1,8 +1,12 @@
 package com.example.ytsample.controllers
 
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -15,10 +19,14 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.work.WorkInfo
 import com.example.ytsample.R
 import com.example.ytsample.databinding.ActivityMainBinding
+import com.example.ytsample.ui.bottomsheet.YtBottomSheetFragment
+import com.example.ytsample.ui.home.HomeFragment
 import com.example.ytsample.ui.home.HomeFragmentDirections
 import com.example.ytsample.utils.Constants
 import com.example.ytsample.utils.Constants.Companion.TAG_PROGRESS
 import com.example.ytsample.utils.MainViewModel
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,7 +47,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun clearWorkManager() {
-
         mainViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         val wmList  = mainViewModel?.workManager?.getWorkInfosByTag(TAG_PROGRESS)
         val anyWorkIsRunning = wmList?.get()?.any { it.state == WorkInfo.State.RUNNING }
@@ -66,9 +73,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleSendText(intent: Intent) {
         intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-            val action =
-                HomeFragmentDirections.actionNavigationHomeToYtBottomSheetFragment(it, true)
-            findNavController(R.id.nav_host_fragment_activity_main).navigate(action)
+            supportFragmentManager.fragments.forEach { fragment ->
+//                val action =
+//                    HomeFragmentDirections.actionNavigationHomeToYtBottomSheetFragment(it, true)
+//                findNavController(R.id.nav_host_fragment_activity_main).navigate(action)
+                if (fragment is HomeFragment) {
+                    val dialogInStack =  fragment.childFragmentManager.findFragmentByTag(Constants.YT_BOTTOM_SHEET_FRAGMENT_TAG) as YtBottomSheetFragment?
+                    if (dialogInStack == null) {
+                        val dialog = YtBottomSheetFragment.newInstance(it)
+                        dialog.isCancelable = false
+                        dialog.setDialogListener(fragment as HomeFragment)
+                        dialog.show(
+                            fragment.childFragmentManager,
+                            Constants.YT_BOTTOM_SHEET_FRAGMENT_TAG
+                        )
+                    }
+                }
+            }
         }
     }
 

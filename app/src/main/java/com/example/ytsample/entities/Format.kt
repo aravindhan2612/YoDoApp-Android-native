@@ -3,6 +3,7 @@ package com.example.ytsample.entities
 import androidx.annotation.NonNull
 
 class Format {
+
     enum class VCodec {
         H263, H264, MPEG4, VP8, VP9, NONE
     }
@@ -14,33 +15,33 @@ class Format {
     /**
      * An identifier used by youtube for different formats.
      */
-    val itag: Int
+    var itag = 0
 
     /**
      * The file extension and conainer format like "mp4"
      */
-    val ext: String?
+    var ext: String? = null
 
     /**
      * The pixel height of the video stream or -1 for audio files.
      */
-    val height: Int
+    var height = 0
 
     /**
      * Get the frames per second
      */
-    val fps: Int
+    var fps = 0
     val videoCodec: VCodec? = null
     val audioCodec: ACodec? = null
 
     /**
      * Audio bitrate in kbit/s or -1 if there is no audio track.
      */
-    val audioBitrate: Int
-    val isDashContainer: Boolean
-    val isHlsContent: Boolean
+    var audioBitrate = 0
+    var isDashContainer = false
+    var isHlsContent = false
 
-    internal constructor(
+    constructor(
         itag: Int,
         ext: String?,
         height: Int,
@@ -57,7 +58,7 @@ class Format {
         isHlsContent = false
     }
 
-    internal constructor(
+    constructor(
         itag: Int,
         ext: String?,
         vCodec: VCodec?,
@@ -74,7 +75,7 @@ class Format {
         isHlsContent = false
     }
 
-    internal constructor(
+    constructor(
         itag: Int, ext: String?, height: Int, vCodec: VCodec?, aCodec: ACodec?, audioBitrate: Int,
         isDashContainer: Boolean
     ) {
@@ -87,7 +88,7 @@ class Format {
         isHlsContent = false
     }
 
-    internal constructor(
+    constructor (
         itag: Int, ext: String?, height: Int, vCodec: VCodec?, aCodec: ACodec?, audioBitrate: Int,
         isDashContainer: Boolean, isHlsContent: Boolean
     ) {
@@ -100,7 +101,7 @@ class Format {
         this.isHlsContent = isHlsContent
     }
 
-    internal constructor(
+    constructor (
         itag: Int,
         ext: String?,
         height: Int,
@@ -121,7 +122,7 @@ class Format {
     override fun equals(o: Any?): Boolean {
         if (this === o) return true
         if (o == null || javaClass != o.javaClass) return false
-        val format = o as Format
+        val format: Format = o as Format
         if (itag != format.itag) return false
         if (height != format.height) return false
         if (fps != format.fps) return false

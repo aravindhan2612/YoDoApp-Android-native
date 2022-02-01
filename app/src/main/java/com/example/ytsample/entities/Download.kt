@@ -1,16 +1,22 @@
 package com.example.ytsample.entities
 
-import android.os.Parcel
 
 import android.os.Parcelable
-import android.os.Parcelable.Creator
-import kotlinx.android.parcel.Parcelize
+import androidx.work.WorkInfo
+import kotlinx.parcelize.Parcelize
 
 
 @Parcelize
-class Download() : Parcelable {
+class Download(
+    var progress: Int = 0,
+    var currentFileSize: Int = 0,
+    var totalFileSize: Int = 0,
+    var downloadTitle: String? = null,
+    var fileName: String? = null,
+    var id: String? = null,
+    var state: WorkInfo.State? = null,
+    var isDownloadOrCancelled : Boolean = false
+) : Parcelable {
 
-    var progress = 0
-    var currentFileSize = 0
-    var totalFileSize = 0
+
 }

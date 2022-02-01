@@ -4,10 +4,8 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.util.SparseArray
+import androidx.lifecycle.*
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
@@ -23,8 +21,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
-import java.lang.Exception
-import java.lang.StringBuilder
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
@@ -35,7 +31,7 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 
-class YtBottomSheetViewModel : ViewModel() {
+class YtBottomSheetViewModel(stateHandle: SavedStateHandle) : ViewModel() {
     var responseResult = MutableLiveData<JSONObject?>()
     var responseJsonResult: LiveData<JSONObject?>? = responseResult
     var encSignatures = ArrayList<Signature>()
@@ -56,6 +52,20 @@ class YtBottomSheetViewModel : ViewModel() {
     var LOGGING = false
     var CACHING = true
     private val LOG_TAG = "YTSample"
+    private var state  = stateHandle
+
+
+    companion object{
+        const val  URL_TEXT = "url_text"
+    }
+
+    fun setUrl(url:String?){
+        state.set(URL_TEXT,url)
+    }
+
+    fun getUrl():String?{
+        return state.get(URL_TEXT)
+    }
 
     fun getRequest(context: Context, ytUrl: String?, fragment: YtBottomSheetFragment) {
         viewModelScope.launch {
@@ -119,7 +129,6 @@ class YtBottomSheetViewModel : ViewModel() {
             val itag = format.getInt("itag")
             if (format.has("url")) {
                 ytFormat.url = format.getString("url").replace("\\u0026", "&")
-                println("****** url formats " + ytFormat.url)
             } else if (format.has("signatureCipher")) {
                 mat =
                     YouTubeUtils.patSigEncUrl.matcher(
@@ -150,7 +159,6 @@ class YtBottomSheetViewModel : ViewModel() {
             val itag = adaptiveFormat.getInt("itag")
             if (adaptiveFormat.has("url")) {
                 ytFormat.url = adaptiveFormat.getString("url").replace("\\u0026", "&")
-                println("****** url adaptive " + ytFormat.url)
             } else if (adaptiveFormat.has("signatureCipher")) {
                 mat = YouTubeUtils.patSigEncUrl.matcher(
                     adaptiveFormat.getString("signatureCipher")

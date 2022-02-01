@@ -1,15 +1,11 @@
 package com.example.ytsample.utils
 
 import android.os.Build
-import android.util.SparseArray
-import com.example.ytsample.entities.Format
-import org.json.JSONObject
 import java.util.regex.Pattern
 
 class YouTubeUtils {
 
     companion object {
-         var FORMAT_MAP: SparseArray<Format> = SparseArray<Format>()
          val USER_AGENT =
             "Mozilla/5.0 (Linux; Android ${Build.VERSION.RELEASE}; ${Build.MANUFACTURER} ${Build.MODEL}) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19"
         @JvmStatic

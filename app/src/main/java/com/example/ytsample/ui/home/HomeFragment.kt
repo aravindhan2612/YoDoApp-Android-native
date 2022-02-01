@@ -1,8 +1,12 @@
 package com.example.ytsample.ui.home
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,16 +18,22 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.ytsample.controllers.MainActivity
 import com.example.ytsample.R
+import com.example.ytsample.callbacks.IDialogListener
 import com.example.ytsample.databinding.FragmentHomeBinding
+import com.example.ytsample.entities.DownloadedData
+import com.example.ytsample.ui.bottomsheet.YtBottomSheetFragment
+import com.example.ytsample.utils.Constants
+import com.example.ytsample.utils.MainViewModel
 import com.google.android.material.snackbar.Snackbar
+import java.io.File
 
 
-class HomeFragment : Fragment(), View.OnClickListener {
+class HomeFragment : Fragment(), View.OnClickListener,IDialogListener {
 
     private lateinit var homeViewModel: HomeViewModel
     private lateinit var _binding: FragmentHomeBinding
-
-    private lateinit var mainActivity: MainActivity
+    private var mainActivity: MainActivity? = null
+    private var mainViewModel: MainViewModel? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,12 +49,14 @@ class HomeFragment : Fragment(), View.OnClickListener {
         super.onViewCreated(view, savedInstanceState)
         homeViewModel =
             ViewModelProvider(this).get(HomeViewModel::class.java)
+        mainViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         when {
             ContextCompat.checkSelfPermission(
                 requireContext(),
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED -> {
                 initAllData()
+                createFolderDir()
             }
             else -> {
                 requestPermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -56,7 +68,7 @@ class HomeFragment : Fragment(), View.OnClickListener {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        mainActivity = context as MainActivity
+        mainActivity = context as MainActivity?
     }
 
     private fun initAllData() {
@@ -71,6 +83,7 @@ class HomeFragment : Fragment(), View.OnClickListener {
                 // Permission is granted. Continue the action or workflow in your
                 // app.
                 initAllData()
+                createFolderDir()
             } else {
                 // Explain to the user that the feature is unavailable because the
                 // features requires a permission that the user has denied. At the
@@ -92,11 +105,19 @@ class HomeFragment : Fragment(), View.OnClickListener {
                 ) {
                     setErrorTV()
                 } else {
-                    val action =
-                        HomeFragmentDirections.actionNavigationHomeToYtBottomSheetFragment(_binding.editUrl.text.toString(),false)
-                    findNavController().navigate(action)
+                    showYTBottomSheetDialog()
                 }
             }
+        }
+    }
+
+    private fun showYTBottomSheetDialog() {
+        val dialogInStack =  this.childFragmentManager.findFragmentByTag(Constants.YT_BOTTOM_SHEET_FRAGMENT_TAG) as YtBottomSheetFragment?
+        if (dialogInStack == null) {
+            val dialog = YtBottomSheetFragment.newInstance(_binding.editUrl.text.toString())
+            dialog.isCancelable = false
+            dialog.setDialogListener(this)
+            dialog.show(this.childFragmentManager, Constants.YT_BOTTOM_SHEET_FRAGMENT_TAG)
         }
     }
 
@@ -126,4 +147,50 @@ class HomeFragment : Fragment(), View.OnClickListener {
         }
     }
 
+    private fun createFolderDir() {
+        var file: File? = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = activity?.contentResolver
+            val values = ContentValues()
+            values.put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                Environment.DIRECTORY_DOWNLOADS + "/YoDoApp"
+            )
+            val uri =
+                resolver?.insert(MediaStore.Files.getContentUri("external"), values)
+
+            // Output stream to write file uri?.let { resolver.openOutputStream(it) }
+            file = uri?.path?.let { File(it) }
+        } else {
+            file =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/YoDoApp")
+            // Output stream to write file
+        }
+        if (file?.isDirectory == false) {
+            file.mkdir()
+        }
+    }
+
+    fun downloadVideoData(downloadedData: DownloadedData) {
+        if (downloadedData.youtubeDlUrl != null) {
+            mainViewModel?.downloadvideo(downloadedData)
+            val action =
+                HomeFragmentDirections.actionYtBottomSheetFragmentToNavigationDownload(
+                    downloadedData
+                )
+            findNavController().navigate(action)
+        } else {
+            view?.let {
+                Snackbar.make(it, "Unable to download video ", Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onDialogResult(type: Any?) {
+        type?.let {
+            if (it is DownloadedData){
+                downloadVideoData(it)
+            }
+        }
+    }
 }

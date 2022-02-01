@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.SparseArray
 import androidx.lifecycle.*
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
@@ -20,8 +21,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.*
-import java.lang.Exception
-import java.lang.StringBuilder
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
@@ -54,6 +53,7 @@ class YtBottomSheetViewModel(stateHandle: SavedStateHandle) : ViewModel() {
     var CACHING = true
     private val LOG_TAG = "YTSample"
     private var state  = stateHandle
+
 
     companion object{
         const val  URL_TEXT = "url_text"

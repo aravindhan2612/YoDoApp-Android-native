@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ytsample.R
 import com.example.ytsample.databinding.YtItemBinding
@@ -11,6 +12,8 @@ import com.example.ytsample.entities.DownloadedData
 import com.example.ytsample.entities.FormatsModel
 import com.example.ytsample.entities.VideoMeta
 import com.example.ytsample.ui.bottomsheet.YtBottomSheetFragment
+import com.example.ytsample.utils.Constants
+import com.example.ytsample.utils.MainViewModel
 
 class YTAdapter(
     var list: ArrayList<FormatsModel>?,
@@ -20,6 +23,11 @@ class YTAdapter(
 ) : RecyclerView.Adapter<YTAdapter.Holder>() {
 
     private lateinit var ytBinding: YtItemBinding
+    private var mainViewModel: MainViewModel? = null
+
+    init {
+        mainViewModel = ViewModelProvider(homeFragment).get(MainViewModel::class.java)
+    }
 
     inner class Holder(itemView: YtItemBinding) : RecyclerView.ViewHolder(itemView.root),
         View.OnClickListener {
@@ -55,17 +63,26 @@ class YTAdapter(
             if (it.format != null) {
                 val videFormat = fm.format?.mimeType?.substringBefore(";")
                 val tv =
-                    if (it.format?.qualityLabel != null) fm.format?.qualityLabel + " $videFormat" else fm.format?.audioQuality
+                    if (it.format?.qualityLabel != null) fm.format?.qualityLabel + " $videFormat" else fm.format?.audioQuality + getBitrate(fm)
                 holder.binding.textView.text = tv
             } else if (it.adaptive != null) {
                 val videFormat = fm.adaptive?.mimeType?.substringBefore(";")
                 val tv =
-                    if (it.adaptive?.qualityLabel != null) fm.adaptive?.qualityLabel + " $videFormat" else fm.adaptive?.audioQuality
+                    if (it.adaptive?.qualityLabel != null) fm.adaptive?.qualityLabel + " $videFormat" else fm.adaptive?.audioQuality + getBitrate(fm)
                 holder.binding.textView.text = tv
             }
 
         }
 
+    }
+
+    private fun getBitrate(fm: FormatsModel): String {
+        var bitrate:String = ""
+        val formatVal = fm.itag?.let { it1 -> mainViewModel?.FORMAT_MAP?.get(it1) }
+        if (formatVal != null){
+            bitrate =" - " +formatVal.audioBitrate +" kbps"
+        }
+        return bitrate
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {

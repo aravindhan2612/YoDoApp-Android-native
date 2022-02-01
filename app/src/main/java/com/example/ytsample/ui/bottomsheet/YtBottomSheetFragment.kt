@@ -93,20 +93,22 @@ class YtBottomSheetFragment() : BottomSheetDialogFragment(), View.OnClickListene
             if (ytMetaData != null && !ytMetaData.list.isNullOrEmpty()) {
                 binding.titleTv.visibility = View.VISIBLE
                 binding.titleTv.text = ytMetaData.meta?.title
-                val audioList =
+                var audioList =
                     ytMetaData.list.filter {
                         it.adaptive?.mimeType?.contains(
                             "audio",
                             true
                         ) == true || it.format?.mimeType?.contains("audio", true) == true
                     }
-                val videoList =
+                var videoList =
                     ytMetaData.list.filter {
                         it.adaptive?.mimeType?.contains(
                             "video",
                             true
                         ) == true || it.format?.mimeType?.contains("video", true) == true
                     }
+                videoList = videoList.filter { it.adaptive?.audioQuality != null|| it.format?.audioQuality != null  }
+                //audioList = audioList.filter { it.adaptive?.mimeType?.contains("webm",false) == false || it.format?.mimeType?.contains("webm",false) == false }
                 initAudioAdapter(audioList as ArrayList<FormatsModel>, ytMetaData.meta)
                 initVideoAdapter(videoList as ArrayList<FormatsModel>, ytMetaData.meta)
                 viewModel.text = null

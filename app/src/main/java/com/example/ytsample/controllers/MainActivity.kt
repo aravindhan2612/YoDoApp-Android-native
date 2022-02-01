@@ -73,10 +73,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleSendText(intent: Intent) {
         intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-            supportFragmentManager.fragments.forEach { fragment ->
-//                val action =
-//                    HomeFragmentDirections.actionNavigationHomeToYtBottomSheetFragment(it, true)
-//                findNavController(R.id.nav_host_fragment_activity_main).navigate(action)
+            val navFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main)
+            navFragment?.childFragmentManager?.fragments?.forEach { fragment ->
                 if (fragment is HomeFragment) {
                     val dialogInStack =  fragment.childFragmentManager.findFragmentByTag(Constants.YT_BOTTOM_SHEET_FRAGMENT_TAG) as YtBottomSheetFragment?
                     if (dialogInStack == null) {

@@ -1,8 +1,5 @@
 package com.example.ytsample.utils
 
-import android.util.SparseArray
-import com.example.ytsample.entities.Format
-
 class Constants {
     companion object{
         const val TAG_OUTPUT = "OUTPUT"
@@ -15,9 +12,5 @@ class Constants {
         const val DOWNLOAD_VIDEO = "DOWNLOAD_VIDEO"
 
         const val  YT_BOTTOM_SHEET_FRAGMENT_TAG = "yt_bottom_sheet_fragment"
-    }
-    init {
-
-
     }
 }

@@ -55,15 +55,15 @@ class DownloadsFragment : Fragment(), IAdapterCallback {
         initAdapter(null, null)
         initDownloadedAdapter()
         mainActivityViewModel.progressWorkInfoItems.observe(viewLifecycleOwner, progressObserver())
-        mainActivityViewModel.downloadFileLiveDataList.observe(viewLifecycleOwner, { list ->
+        mainActivityViewModel.downloadFileLiveDataList.observe(viewLifecycleOwner) { list ->
             downloadedFilesAdapter?.refreshDBList(list as ArrayList<DownloadedFile>?)
             val isEmpty = (list.isNullOrEmpty())
             _binding.textDownload.visibility = if (isEmpty) View.VISIBLE else View.GONE
             _binding.downloadedRecyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
-        })
-        LiveDataHelper.instance?.observePercentage()?.observe(viewLifecycleOwner, {
+        }
+        LiveDataHelper.instance?.observePercentage()?.observe(viewLifecycleOwner) {
             adapter?.refreshDBList(it)
-        })
+        }
     }
 
     private fun initDownloadedAdapter() {

@@ -7,7 +7,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
@@ -64,11 +67,37 @@ class MainActivity : AppCompatActivity() {
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.navigation_home, R.id.navigation_download
+                R.id.navigation_home, R.id.navigation_download,R.id.navigation_video
             )
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.navigation_home -> showBottomNav()
+                R.id.navigation_download -> showBottomNav()
+                R.id.navigation_video ->showBottomNav()
+                else -> hideBottomNav()
+            }
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == android.R.id.home) {
+            onBackPressed()
+            return true
+        }
+        return true
+    }
+
+    private fun showBottomNav() {
+        binding.navView.visibility = View.VISIBLE
+
+    }
+
+    private fun hideBottomNav() {
+        binding.navView.visibility = View.GONE
+
     }
 
     private fun handleSendText(intent: Intent) {

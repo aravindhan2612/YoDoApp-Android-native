@@ -22,7 +22,9 @@
             <ImageView
                 android:id="@+id/video_thumbnail"
                 android:layout_width="match_parent"
-                android:layout_height="100dp" />
+                android:layout_height="100dp"
+                android:scaleType="fitXY"
+                android:adjustViewBounds="true"/>
 
             <TextView
                 android:id="@+id/video_title_name"
@@ -33,7 +35,7 @@
                 android:maxLines="1"
                 android:padding="5dp"
                 android:textAlignment="viewStart"
-                android:textColor="@color/black"
+                android:textColor="@color/video_name_color"
                 android:textSize="15dp"
                 android:textStyle="bold" />
         </LinearLayout>

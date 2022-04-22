@@ -232,19 +232,28 @@ class DownLoadFileWorkManager(context: Context, workerParams: WorkerParameters) 
             this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             this.putExtra("data", "fromoutside")
         }
-        val pendingIntent = PendingIntent.getActivity(
-            applicationContext.applicationContext,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        var pendingIntent :PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.getActivity(
+                applicationContext,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+        } else{
+            PendingIntent.getActivity(
+                applicationContext,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        }
         val notification =
             builder.setSmallIcon(com.example.ytsample.R.drawable.ic_baseline_ondemand_video_24)
                 .setContentTitle(downloadTitle)
                 .setContentText("Download completed")
                 .setContentIntent(pendingIntent)
                 .setOnlyAlertOnce(true)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)?.build()
-        notificationManager?.notify(id, notification)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT).build()
+        notificationManager.notify(id, notification)
     }
 }

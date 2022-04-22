@@ -62,8 +62,6 @@ class HomeFragment : Fragment(), View.OnClickListener,IDialogListener {
                 requestPermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }
-
-
     }
 
     override fun onAttach(context: Context) {

@@ -30,4 +30,33 @@
             app:argType="com.example.ytsample.entities.DownloadedData"
             app:nullable="true" />
     </fragment>
+
+    <fragment
+        android:id="@+id/navigation_video"
+        android:name="com.example.ytsample.ui.video.VideosFragment"
+        android:label="@string/title_video"
+        tools:layout="@layout/fragment_videos">
+        <action
+            android:id="@+id/action_navigation_video_to_videoPlayFragment"
+            app:destination="@id/videoPlayFragment" >
+        <argument
+            android:name="videoData"
+            app:argType="com.example.ytsample.entities.video.Video"
+            app:nullable="true" />
+        </action>
+    </fragment>
+    <fragment
+        android:id="@+id/videoPlayFragment"
+        android:name="com.example.ytsample.ui.video.VideoPlayFragment"
+        android:label="VideoPlayFragment" >
+        <argument
+            android:name="videoData"
+            app:argType="com.example.ytsample.entities.video.Video"
+            app:nullable="true" />
+        <action
+            android:id="@+id/action_videoPlayFragment_to_navigation_video2"
+            app:destination="@id/navigation_video"
+            app:popUpTo="@id/navigation_video"
+            app:popUpToInclusive="true" />
+    </fragment>
 </navigation>

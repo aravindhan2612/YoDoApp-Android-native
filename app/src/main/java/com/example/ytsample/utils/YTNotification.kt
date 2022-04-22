@@ -46,7 +46,22 @@ open class YTNotification(private val ctx: Context) {
             this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             this.putExtra("data", "fromoutside")
         }
-        return PendingIntent.getActivity(ctx.applicationContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        var pendingIntent :PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.getActivity(
+                ctx.applicationContext,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+        } else{
+            PendingIntent.getActivity(
+                ctx.applicationContext,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        }
+        return pendingIntent
     }
 
     fun getNotificationBuilder(): NotificationCompat.Builder? {

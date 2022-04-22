@@ -9,4 +9,5 @@
     <color name="white">#FFFFFFFF</color>
     <color name="success">#00ff00</color>
     <color name="failed">#cf000f</color>
+    <color name="video_name_color">#FF000000</color>
 </resources>

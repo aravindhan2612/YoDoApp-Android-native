@@ -61,8 +61,7 @@ implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.3'
 implementation platform('com.google.firebase:firebase-bom:29.0.0')
 implementation 'com.google.firebase:firebase-analytics-ktx'
 implementation 'com.google.firebase:firebase-crashlytics-ktx'
-
-
+```
 # Legal Notice
 This app is for educational use only. Downloading copyrighted content from YouTube without permission is against YouTube’s terms and potentially illegal in some jurisdictions. Use responsibly.
 # License

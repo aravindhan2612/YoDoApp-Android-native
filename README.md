@@ -1,4 +1,4 @@
-# 📥 YouTube Downloader App (Android)
+# 📥 YoDo App (Android)
 
 An Android app that allows users to download YouTube videos and MP3s. Built using a combination of networking, JavaScript evaluation, background tasks, local storage, and Firebase analytics.
 
